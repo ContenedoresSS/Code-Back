@@ -1,0 +1,22 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+}
+
+model User {
+  id         String @id @default(uuid()) @db.Uuid
+  identifier String @unique 
+  password   String // Aquí guardaremos el hash de bcrypt
+  role       Role
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
