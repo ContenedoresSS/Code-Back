@@ -7,6 +7,7 @@ import type { LoginResponse } from "../types/responses/login-response.model.js";
 import userService from "./user.service.js";
 import tokenService from "./token.service.js";
 import type { TokenPayload } from "../types/models/tokens/token-payload.model.js";
+import invitationService from "./invitation.service.js";
 
 class AuthService {
   readonly SALT_ROUNDS: number = 10;
@@ -30,7 +31,7 @@ class AuthService {
       );
 
       if (data.invitationCode) {
-        await this.consumeInvitation(data.invitationCode, tx);
+        await invitationService.validateAndConsume(data.invitationCode, tx);
       }
 
       return user;
