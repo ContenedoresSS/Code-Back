@@ -19,7 +19,6 @@ class AuthService {
     const newUser = await prisma.$transaction(async (tx) => {
       const user = await userService.create(
         {
-          username: data.username,
           email: data.email,
           passwordHash: hashedPassword,
           name: data.name,
@@ -104,7 +103,7 @@ class AuthService {
 
   public async refreshAccessToken(refreshToken: string): Promise<LoginResponse> {
     const decoded = tokenService.verifyRefreshToken(refreshToken);
-    const user = await userService.findByAnyIdentifierAndRole(decoded.sub);
+    const user = await userService.findByIdWithRole(decoded.sub);
 
     if (!user) {
       throw new Error("User not found");
