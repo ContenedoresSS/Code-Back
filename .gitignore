@@ -17,6 +17,7 @@ coverage
 benchmarks/graphs
 
 #ENV
+dist/
 .env
 
 # ignore additional files using core.excludesFile
