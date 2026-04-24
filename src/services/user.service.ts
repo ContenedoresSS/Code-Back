@@ -7,14 +7,33 @@ class UserService {
   }
 
   async findByAnyIdentifierAndRole(identifier: string) {
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [{ id: identifier }, { email: identifier }, { identifier: identifier }],
-      },
-      include: { role: true },
-    });
+    try {
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [{ email: identifier }, { identifier: identifier }],
+        },
+        include: { role: true },
+      });
 
-    return user;
+      return user;
+    } catch (error: any) {
+      throw new Error("Invalid credentials");
+    }
+  }
+
+  async findByIdWithRole(id: string){
+    try {
+      const user = await prisma.user.findFirst({
+        where: {
+          id
+        },
+        include: { role: true },
+      });
+
+      return user;
+    } catch (error: any) {
+      throw new Error("Invalid credentials");
+    }
   }
 }
 
