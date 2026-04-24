@@ -12,6 +12,7 @@
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "types": [],
+    "typeRoots": ["./node_modules/@types", "./src/types/global"],
     // For nodejs:
     // "lib": ["esnext"],
     // "types": ["node"],

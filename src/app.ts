@@ -1,6 +1,6 @@
 import { ENV } from "./config/env.config.js";
 import express from "express";
-import v1Routes from "./routes/index.routes.js";
+import v1Routes from "./routes/index-v1.routes.js";
 
 const PORT = ENV.PORT;
 

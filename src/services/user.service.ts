@@ -21,11 +21,11 @@ class UserService {
     }
   }
 
-  async findByIdWithRole(id: string){
+  async findByIdWithRole(id: string) {
     try {
       const user = await prisma.user.findFirst({
         where: {
-          id
+          id,
         },
         include: { role: true },
       });
