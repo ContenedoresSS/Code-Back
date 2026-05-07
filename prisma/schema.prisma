@@ -42,3 +42,15 @@ model User {
 
   @@map("users")
 }
+
+model ProgrammingLanguage {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(50)
+  version     String   @db.VarChar(20)
+  dockerImage String   @map("docker_image") @db.VarChar(255)
+  executionCommand String   @map("execution_command") @db.VarChar(255)
+  fileExtension    String   @map("file_extension") @db.VarChar(10)
+
+  @@unique([name, version])
+  @@map("programming_languages")
+}
