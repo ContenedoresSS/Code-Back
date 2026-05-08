@@ -18,6 +18,9 @@ class ExecutionService {
     });
 
     if (!language) throw new Error("Unsupported language");
+
+    await this.ensureImageExists(language.dockerImage);
+
     const fileName = `solution.${language.fileExtension}`;
 
     const container = await this.docker.createContainer({
@@ -51,6 +54,27 @@ class ExecutionService {
       offset += 8 + length;
     }
     return result.trim();
+  }
+
+  private async ensureImageExists(imageName: string): Promise<void> {
+    try {
+      await this.docker.getImage(imageName).inspect();
+    } catch (error: any) {
+      if (error.statusCode === 404) {
+        await new Promise<void>((resolve, reject) => {
+          this.docker.pull(imageName, (err: any, stream: any) => {
+            if (err) return reject(err);
+
+            this.docker.modem.followProgress(stream, (err: any) => {
+              if (err) return reject(err);
+              resolve();
+            });
+          });
+        });
+      } else {
+        throw error;
+      }
+    }
   }
 }
 
