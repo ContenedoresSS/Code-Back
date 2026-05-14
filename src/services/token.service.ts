@@ -10,6 +10,7 @@ class TokenService implements ITokenService {
       {
         sub: payload.sub,
         role: payload.role,
+        name: payload.name,
       },
       ENV.JWT_SECRET,
       { expiresIn: "4h" }

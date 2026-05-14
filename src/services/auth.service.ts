@@ -94,6 +94,7 @@ class AuthService {
     const pairTokens = await tokenService.generateTokenPair({
       sub: user.id,
       role: user.role.name,
+      name: user.name,
     } as TokenPayload);
 
     return {
@@ -113,6 +114,7 @@ class AuthService {
     const tokenPair = await tokenService.generateTokenPair({
       sub: user.id,
       role: user.role.name,
+      name: user.name,
     });
 
     return {
