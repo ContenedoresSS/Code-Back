@@ -76,6 +76,21 @@ class ExecutionService {
       }
     }
   }
+
+  public async pullAndPrepImage(imageName: string) {
+    try {
+      const stream = await this.docker.pull(imageName);
+
+      await new Promise((resolve, reject) => {
+        this.docker.modem.followProgress(stream, (err, res) => {
+          if (err) reject(err);
+          else resolve(res);
+        });
+      });
+    } catch (error) {
+      console.error(`[Docker Error] Error preparing runner image ${imageName}:`, error);
+    }
+  }
 }
 
 export default new ExecutionService();

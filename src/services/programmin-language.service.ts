@@ -2,12 +2,15 @@ import prisma from "../config/prisma.js";
 import type { CreateLanguageRequest } from "../types/requests/create-language.request.js";
 import type { UpdateLanguageRequest } from "../types/requests/update-language.response.js";
 import type { LanguageResponse } from "../types/responses/language-response.model.js";
+import ExecutionService from "./execution.service.js";
 
 class ProgrammingLanguageService {
   async create(data: CreateLanguageRequest, tx?: any): Promise<LanguageResponse> {
-    const db = tx || [prisma];
     try {
-      return await db.programmingLanguage.create({ data });
+      const newLanguage = await prisma.programmingLanguage.create({ data });
+      ExecutionService.pullAndPrepImage(newLanguage.dockerImage);
+
+      return newLanguage;
     } catch (error: any) {
       if (error.code === "P2002") {
         throw new Error("The combination of name and version already exists.");

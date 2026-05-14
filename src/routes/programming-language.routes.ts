@@ -8,8 +8,8 @@ const router = Router();
 router.get("/", ProgrammingLanguageController.getAll);
 
 router.get("/:id", ProgrammingLanguageController.getById);
-router.post("/", authenticate, rbac, ProgrammingLanguageController.create);
-router.put("/:id", authenticate, rbac, ProgrammingLanguageController.update);
-router.delete("/:id", authenticate, rbac, ProgrammingLanguageController.delete);
+router.post("/", authenticate, rbac([]), ProgrammingLanguageController.create);
+router.put("/:id", authenticate, rbac([]), ProgrammingLanguageController.update);
+router.delete("/:id", authenticate, rbac([]), ProgrammingLanguageController.delete);
 
 export default router;
