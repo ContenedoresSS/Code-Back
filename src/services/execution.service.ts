@@ -59,7 +59,9 @@ class ExecutionService {
       Cmd: ["sh", "-c", finalCommand],
       HostConfig: {
         Memory: 128 * 1024 * 1024,
+        MemorySwap: 128 * 1024 * 1024,
         CpuQuota: 50000,
+        PidsLimit: 30,
         AutoRemove: true,
       },
       NetworkDisabled: true,
