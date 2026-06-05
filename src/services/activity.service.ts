@@ -96,10 +96,18 @@ export class ActivityService implements IActivityService {
     }
   }
 
-  public async getActivityById(activityId: string, professorId: string): Promise<ActivityResponse> {
+  public async getActivityById(
+    activityId: string,
+    userRole: UserRole,
+    userId: string
+  ): Promise<ActivityResponse> {
     try {
+      const isGod = userRole === UserRole.God;
+
+      const whereClause = isGod ? { id: activityId } : { id: activityId, professorId: userId };
+
       const activity = await prisma.activity.findFirst({
-        where: { id: activityId, professorId },
+        where: whereClause,
       });
 
       if (!activity) {
@@ -117,11 +125,12 @@ export class ActivityService implements IActivityService {
 
   public async updateActivity(
     activityId: string,
-    professorId: string,
+    userRole: UserRole,
+    userId: string,
     data: UpdateActivityRequest
   ): Promise<ActivityResponse> {
     try {
-      const existingActivity = await this.getActivityById(activityId, professorId);
+      const existingActivity = await this.getActivityById(activityId, userRole, userId);
 
       const updateData: any = {};
 
@@ -153,9 +162,13 @@ export class ActivityService implements IActivityService {
     }
   }
 
-  public async deleteActivity(activityId: string, professorId: string): Promise<void> {
+  public async deleteActivity(
+    activityId: string,
+    userRole: UserRole,
+    userId: string
+  ): Promise<void> {
     try {
-      await this.getActivityById(activityId, professorId);
+      await this.getActivityById(activityId, userRole, userId);
 
       await prisma.activity.delete({
         where: { id: activityId },

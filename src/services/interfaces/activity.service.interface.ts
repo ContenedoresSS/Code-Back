@@ -8,7 +8,11 @@ import { UserRole } from "../../types/enums/role.enum.js";
 
 export interface IActivityService {
   createActivity(professorId: string, data: CreateActivityRequest): Promise<ActivityResponse>;
-  getActivityById(activityId: string, professorId: string): Promise<ActivityResponse>;
+  getActivityById(
+    activityId: string,
+    userRole: UserRole,
+    userId: string
+  ): Promise<ActivityResponse>;
   getAllActivities(
     userId: string,
     userRole: UserRole,
@@ -17,9 +21,10 @@ export interface IActivityService {
   ): Promise<PaginationData<ActivitySummaryResponse>>;
   updateActivity(
     activityId: string,
-    professorId: string,
+    userRole: UserRole,
+    userId: string,
     data: UpdateActivityRequest
   ): Promise<ActivityResponse>;
-  deleteActivity(activityId: string, professorId: string): Promise<void>;
+  deleteActivity(activityId: string, userRole: UserRole, userId: string): Promise<void>;
   getWorkspaceForStudent(activityId: string): Promise<StudentWorkspaceResponse>;
 }

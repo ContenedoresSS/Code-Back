@@ -11,9 +11,9 @@ class ActivityController {
   public async create(req: Request, res: Response) {
     try {
       const data: CreateActivityRequest = req.body;
-      const professorId = (req as any).user as string;
+      const userId = (req as any).user as string;
 
-      const newActivity = await activityService.createActivity(professorId, data);
+      const newActivity = await activityService.createActivity(userId, data);
       return res.status(201).json(newActivity);
     } catch (error: any) {
       if (error.message.includes("curso no existe") || error.message.includes("lenguaje")) {
@@ -46,13 +46,14 @@ class ActivityController {
   public async getOne(req: Request, res: Response) {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
-      const professorId = (req as any).user as string;
+      const userId = (req as any).user as string;
+      const userRole = (req as any).role;
 
       if (!activityId) {
         return res.status(400).json({ error: "El ID de la actividad es requerido." });
       }
 
-      const activity = await activityService.getActivityById(activityId, professorId);
+      const activity = await activityService.getActivityById(activityId, userRole, userId);
       return res.status(200).json(activity);
     } catch (error: any) {
       if (error.message.includes("Actividad no encontrada")) {
@@ -65,14 +66,20 @@ class ActivityController {
   public async update(req: Request, res: Response) {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
-      const professorId = (req as any).user as string;
+      const userId = (req as any).user as string;
+      const userRole = (req as any).role;
       const data: UpdateActivityRequest = req.body;
 
       if (!activityId) {
         return res.status(400).json({ error: "El ID de la actividad es requerido." });
       }
 
-      const updatedActivity = await activityService.updateActivity(activityId, professorId, data);
+      const updatedActivity = await activityService.updateActivity(
+        activityId,
+        userRole,
+        userId,
+        data
+      );
       return res.status(200).json(updatedActivity);
     } catch (error: any) {
       if (error.message.includes("Actividad no encontrada")) {
@@ -85,13 +92,14 @@ class ActivityController {
   public async delete(req: Request, res: Response) {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
-      const professorId = (req as any).user as string;
+      const userId = (req as any).user as string;
+      const userRole = (req as any).role;
 
       if (!activityId) {
         return res.status(400).json({ error: "El ID de la actividad es requerido." });
       }
 
-      await activityService.deleteActivity(activityId, professorId);
+      await activityService.deleteActivity(activityId, userRole, userId);
       return res.status(204).send();
     } catch (error: any) {
       if (error.message.includes("Actividad no encontrada")) {

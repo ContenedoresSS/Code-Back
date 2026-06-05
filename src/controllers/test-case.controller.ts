@@ -8,10 +8,11 @@ class TestCaseController {
   public async create(req: Request, res: Response) {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
-      const professorId = (req as any).user as string;
+      const userId = (req as any).user as string;
+      const userRole = (req as any).role;
       const data: CreateTestCaseRequest = req.body;
 
-      const newTestCase = await testCaseService.createTestCase(activityId, professorId, data);
+      const newTestCase = await testCaseService.createTestCase(activityId, userRole, userId, data);
       return res.status(201).json(newTestCase);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -21,9 +22,10 @@ class TestCaseController {
   public async getAll(req: Request, res: Response) {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
-      const professorId = (req as any).user as string;
+      const userId = (req as any).user as string;
+      const userRole = (req as any).role;
 
-      const testCases = await testCaseService.getTestCasesByActivity(activityId, professorId);
+      const testCases = await testCaseService.getTestCasesByActivity(activityId, userRole, userId);
       return res.status(200).json(testCases);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -34,13 +36,15 @@ class TestCaseController {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
       const testCaseId = parseIdParam(req.params.testCaseId, "ID del caso de prueba");
-      const professorId = (req as any).user as string;
+      const userId = (req as any).user as string;
+      const userRole = (req as any).role;
       const data: UpdateTestCaseRequest = req.body;
 
       const updatedTestCase = await testCaseService.updateTestCase(
         testCaseId,
         activityId,
-        professorId,
+        userRole,
+        userId,
         data
       );
       return res.status(200).json(updatedTestCase);
@@ -53,9 +57,10 @@ class TestCaseController {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
       const testCaseId = parseIdParam(req.params.testCaseId, "ID del caso de prueba");
-      const professorId = (req as any).user as string;
+      const userId = (req as any).user as string;
+      const userRole = (req as any).role;
 
-      await testCaseService.deleteTestCase(testCaseId, activityId, professorId);
+      await testCaseService.deleteTestCase(testCaseId, activityId, userRole, userId);
       return res.status(204).send();
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
