@@ -77,6 +77,7 @@ async function main() {
   const languages = [
     {
       name: "C++",
+      editorIdentifier: "cpp",
       version: "13.2",
       dockerImage: "gcc:13.2",
       executionCommand: "g++ -o solution *.cpp && ./solution",
@@ -84,6 +85,7 @@ async function main() {
     },
     {
       name: "Python",
+      editorIdentifier: "cpp",
       version: "3.11",
       dockerImage: "python:3.11-slim",
       executionCommand: "python3 ${file}",
@@ -91,10 +93,19 @@ async function main() {
     },
     {
       name: "Node.js",
+      editorIdentifier: "javascript",
       version: "20",
       dockerImage: "node:20-slim",
       executionCommand: "node ${file}",
       fileExtension: "js",
+    },
+    {
+      name: "Java",
+      editorIdentifier: "java",
+      version: "21-slim",
+      dockerImage: "openjdk:21-ea-jdk-slim",
+      executionCommand: "javac *.java && java $(basename ${file} .java)",
+      fileExtension: "java",
     },
   ];
 

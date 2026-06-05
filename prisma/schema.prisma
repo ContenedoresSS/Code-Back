@@ -48,6 +48,7 @@ model User {
 model ProgrammingLanguage {
   id          Int      @id @default(autoincrement())
   name        String   @db.VarChar(50)
+  editorIdentifier String @map("editor_identifier") @db.VarChar(50)
   version     String   @db.VarChar(20)
   dockerImage String   @map("docker_image") @db.VarChar(255)
   executionCommand String   @map("execution_command") @db.VarChar(255)

@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import ProgrammingLanguageService from "../services/programmin-language.service.js";
+import ProgrammingLanguageService from "../services/programming-language.service.js";
 import type { CreateLanguageRequest } from "../types/requests/create-language.request.js";
 import type { UpdateLanguageRequest } from "../types/requests/update-language.response.js";
 
