@@ -39,6 +39,8 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   role         Role     @relation(fields: [roleId], references: [id])
+  subjects    Subject[]
+  submissions Submission[]
 
   @@map("users")
 }
@@ -50,7 +52,67 @@ model ProgrammingLanguage {
   dockerImage String   @map("docker_image") @db.VarChar(255)
   executionCommand String   @map("execution_command") @db.VarChar(255)
   fileExtension    String   @map("file_extension") @db.VarChar(10)
+  activities       Activity[]
 
   @@unique([name, version])
   @@map("programming_languages")
+}
+
+model Subject {
+  id        Int        @id @default(autoincrement())
+  userId    String     @map("user_id") @db.Uuid
+  name      String     @db.Text
+  activities Activity[]
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("subjects")
+}
+
+model Activity {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  professorId  String   @map("professor_id") @db.Uuid
+  languageId   Int      @map("language_id")
+  subjectId    Int      @map("subject_id")
+  title        String   @db.VarChar(200)
+  description  String?  @db.Text
+  starterCode  String?  @map("starter_code") @db.Text
+  maxAttempts  Int      @default(0) @map("max_attempts")
+  allowCopy    Boolean  @default(true) @map("allow_copy")
+  allowPaste   Boolean  @default(true) @map("allow_paste")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  language    ProgrammingLanguage @relation(fields: [languageId], references: [id])
+  subject     Subject             @relation(fields: [subjectId], references: [id])
+  testCases   TestCase[]
+  submissions Submission[]
+
+  @@map("activities")
+}
+
+model TestCase {
+  id             Int     @id @default(autoincrement())
+  activityId     String  @map("activity_id") @db.Uuid
+  input          String? @db.Text
+  expectedOutput String  @map("expected_output") @db.Text
+  isHidden       Boolean @default(false) @map("is_hidden")
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@map("test_cases")
+}
+
+model Submission {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId      String   @map("student_id") @db.Uuid
+  activityId     String   @map("activity_id") @db.Uuid
+  finalGrade     Decimal? @map("final_grade") @db.Decimal(5, 2)
+  executionTimeMs Int?     @map("execution_time_ms")
+  status         String   @db.VarChar(50) // Ej: "PENDING", "ACCEPTED", "WRONG_ANSWER", "TIME_LIMIT_EXCEEDED", "COMPILE_ERROR"
+  submittedAt    DateTime @default(now()) @map("submitted_at") @db.Timestamptz
+
+  student  User     @relation(fields: [studentId], references: [id])
+  activity Activity @relation(fields: [activityId], references: [id])
+
+  @@map("submissions")
 }
