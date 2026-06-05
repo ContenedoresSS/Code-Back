@@ -7,6 +7,10 @@ import testCaseController from "../controllers/test-case.controller.js";
 
 const router = Router();
 
+// Public routes
+router.get("/:id/workspace", activityController.getWorkspace);
+
+//Protected routes
 router.use(authenticate);
 router.use(rbac([UserRole.Teacher]));
 router.post("/", activityController.create);

@@ -100,6 +100,20 @@ class ActivityController {
       return res.status(400).json({ error: error.message });
     }
   }
+
+  public async getWorkspace(req: Request, res: Response) {
+    try {
+      const activityId = parseStringParam(req.params.id, "ID de la actividad");
+
+      const workspaceData = await activityService.getWorkspaceForStudent(activityId);
+      return res.status(200).json(workspaceData);
+    } catch (error: any) {
+      if (error.message.includes("no existe")) {
+        return res.status(404).json({ error: error.message });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 export default new ActivityController();

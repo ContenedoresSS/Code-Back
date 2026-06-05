@@ -5,6 +5,10 @@ import type { UpdateActivityRequest } from "../types/requests/update-activity-re
 import type { ActivityResponse } from "../types/responses/activity-response.model.js";
 import type { ActivitySummaryResponse } from "../types/responses/activity-summary-response.model.js";
 import type { PaginationData } from "../types/shared/pagination-data.shared.js";
+import type {
+  StudentWorkspaceResponse,
+  PublicTestCase,
+} from "../types/responses/student-workspace-response.js";
 import { UserRole } from "../types/enums/role.enum.js";
 
 export class ActivityService implements IActivityService {
@@ -161,6 +165,59 @@ export class ActivityService implements IActivityService {
         throw error;
       }
       throw new Error(`Error al eliminar la actividad: ${error.message}`);
+    }
+  }
+
+  public async getWorkspaceForStudent(activityId: string): Promise<StudentWorkspaceResponse> {
+    try {
+      const activity = await prisma.activity.findUnique({
+        where: { id: activityId },
+        include: {
+          language: true,
+          testCases: {
+            orderBy: { id: "asc" },
+          },
+        },
+      });
+
+      if (!activity) {
+        throw new Error("La actividad no existe o no está disponible.");
+      }
+
+      const secureTestCases: PublicTestCase[] = activity.testCases.map((tc) => {
+        if (tc.isHidden) {
+          return {
+            id: tc.id,
+            isHidden: true,
+          };
+        }
+        const publicTc: PublicTestCase = {
+          id: tc.id,
+          isHidden: false,
+          expectedOutput: tc.expectedOutput,
+          ...(tc.input !== null && { input: tc.input }),
+        };
+
+        return publicTc;
+      });
+
+      return {
+        activityId: activity.id,
+        title: activity.title,
+        description: activity.description,
+        language: {
+          id: activity.language.id,
+          name: activity.language.name,
+          fileExtension: activity.language.fileExtension,
+        },
+        starterCode: activity.starterCode,
+        allowCopy: activity.allowCopy,
+        allowPaste: activity.allowPaste,
+        maxAttempts: activity.maxAttempts,
+        testCases: secureTestCases,
+      };
+    } catch (error: any) {
+      throw new Error(`Error al cargar el entorno de trabajo: ${error.message}`);
     }
   }
 }

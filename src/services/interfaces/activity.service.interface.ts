@@ -3,6 +3,7 @@ import type { UpdateActivityRequest } from "../../types/requests/update-activity
 import type { ActivityResponse } from "../../types/responses/activity-response.model.js";
 import type { ActivitySummaryResponse } from "../../types/responses/activity-summary-response.model.js";
 import type { PaginationData } from "../../types/shared/pagination-data.shared.js";
+import type { StudentWorkspaceResponse } from "../../types/responses/student-workspace-response.js";
 import { UserRole } from "../../types/enums/role.enum.js";
 
 export interface IActivityService {
@@ -20,4 +21,5 @@ export interface IActivityService {
     data: UpdateActivityRequest
   ): Promise<ActivityResponse>;
   deleteActivity(activityId: string, professorId: string): Promise<void>;
+  getWorkspaceForStudent(activityId: string): Promise<StudentWorkspaceResponse>;
 }
