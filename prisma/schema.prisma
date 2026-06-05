@@ -76,7 +76,7 @@ model Activity {
   subjectId    Int      @map("subject_id")
   title        String   @db.VarChar(200)
   description  String?  @db.Text
-  starterCode  String?  @map("starter_code") @db.Text
+  starterCode  Json?    @map("starter_code")
   maxAttempts  Int      @default(0) @map("max_attempts")
   allowCopy    Boolean  @default(true) @map("allow_copy")
   allowPaste   Boolean  @default(true) @map("allow_paste")

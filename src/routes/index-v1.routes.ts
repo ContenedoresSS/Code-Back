@@ -5,6 +5,7 @@ import executionRoutes from "./execution.routes.js";
 import programmingLanguageRoutes from "./programming-language.routes.js";
 import userRoutes from "./user.routes.js";
 import subjetRoutes from "./subject.routes.js";
+import activityRoutes from "./activity.routes.js";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use("/execution", executionRoutes);
 router.use("/programming-language", programmingLanguageRoutes);
 router.use("/user", userRoutes);
 router.use("/subject", subjetRoutes);
+router.use("/activity", activityRoutes);
 
 export default router;
