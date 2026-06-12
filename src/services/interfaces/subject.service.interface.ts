@@ -1,3 +1,4 @@
+import type { UserRole } from "../../types/enums/role.enum.js";
 import type { CreateSubjectRequest } from "../../types/requests/create-subject-request.model.js";
 import type { UpdateSubjectRequest } from "../../types/requests/update-subject-request.model.js";
 import type { SubjectResponse } from "../../types/responses/subject-reponse.model.js";
@@ -10,12 +11,14 @@ export interface ISubjectService {
   createSubject(userId: string, data: CreateSubjectRequest): Promise<SubjectResponse>;
 
   /**
-   * Obtiene la lista paginada de cursos de un profesor específico.
+   * Obtiene la lista paginada de cursos
    */
-  getSubjectsByUser(
+  getSubjects(
     userId: string,
-    skip?: number,
-    take?: number
+    userRole: UserRole,
+    skip: number,
+    take: number,
+    searchTerm?: string
   ): Promise<PaginationData<SubjectResponse>>;
 
   /**

@@ -4,6 +4,7 @@ import type { UpdateSubjectRequest } from "../types/requests/update-subject-requ
 import { getPaginationParams } from "../helpers/pagination.helper.js";
 import { parseIdParam } from "../helpers/param.helper.js";
 import subjectService from "../services/subject.service.js";
+import type { UserRole } from "../types/enums/role.enum.js";
 
 class SubjectController {
   public async create(req: Request, res: Response) {
@@ -20,10 +21,22 @@ class SubjectController {
 
   public async getAll(req: Request, res: Response) {
     try {
-      const userId = req.user as string;
+      const userId = (req as any).user as string;
+      const userRole = (req as any).role as UserRole;
+
       const { skip, take } = getPaginationParams(req);
 
-      const paginatedSubjects = await subjectService.getSubjectsByUser(userId, skip, take);
+      const searchParam = req.query.search;
+      const searchTerm = typeof searchParam === "string" ? searchParam.trim() : undefined;
+
+      const paginatedSubjects = await subjectService.getSubjects(
+        userId,
+        userRole,
+        skip,
+        take,
+        searchTerm
+      );
+
       return res.status(200).json(paginatedSubjects);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });

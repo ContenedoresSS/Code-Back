@@ -60,11 +60,15 @@ export class ActivityService implements IActivityService {
     userId: string,
     userRole: UserRole,
     skip: number = 0,
-    take: number = 10
+    take: number = 10,
+    subjectId?: number
   ): Promise<PaginationData<ActivitySummaryResponse>> {
     try {
       const isAdmin = userRole === UserRole.God;
-      const whereClause = isAdmin ? {} : { professorId: userId };
+      const whereClause = {
+        ...(isAdmin ? {} : { professorId: userId }),
+        ...(subjectId !== undefined ? { subjectId } : {}),
+      };
 
       const [activities, totalCount] = await prisma.$transaction([
         prisma.activity.findMany({

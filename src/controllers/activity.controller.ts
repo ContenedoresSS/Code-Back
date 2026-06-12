@@ -30,11 +30,17 @@ class ActivityController {
 
       const { skip, take } = getPaginationParams(req);
 
+      const subjectQuery = req.query.subjectId;
+      const parsedSubjectId =
+        typeof subjectQuery === "string" ? parseInt(subjectQuery, 10) : undefined;
+      const subjectId = parsedSubjectId && !isNaN(parsedSubjectId) ? parsedSubjectId : undefined;
+
       const paginatedActivities = await activityService.getAllActivities(
         userId,
         userRole,
         skip,
-        take
+        take,
+        subjectId
       );
 
       return res.status(200).json(paginatedActivities);

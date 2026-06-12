@@ -39,8 +39,11 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   role         Role     @relation(fields: [roleId], references: [id])
-  subjects    Subject[]
-  submissions Submission[]
+  subjectsTaught Subject[]  @relation("ProfessorSubjects")
+  enrollments    Enrollment[]
+  submissions    Submission[]
+
+  activities     Activity[]   @relation("ProfessorActivities")
 
   @@map("users")
 }
@@ -63,11 +66,25 @@ model Subject {
   id        Int        @id @default(autoincrement())
   userId    String     @map("user_id") @db.Uuid
   name      String     @db.Text
-  activities Activity[]
 
-  user User @relation(fields: [userId], references: [id])
+  activities Activity[]
+  enrollments Enrollment[]
+  professor  User         @relation("ProfessorSubjects", fields: [userId], references: [id])
 
   @@map("subjects")
+}
+
+model Enrollment {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId  String   @map("student_id") @db.Uuid
+  subjectId  Int      @map("subject_id")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  student    User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId])
+  @@map("enrollments")
 }
 
 model Activity {
@@ -82,6 +99,7 @@ model Activity {
   allowCopy    Boolean  @default(true) @map("allow_copy")
   allowPaste   Boolean  @default(true) @map("allow_paste")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  professor    User                @relation("ProfessorActivities", fields: [professorId], references: [id])
 
   language    ProgrammingLanguage @relation(fields: [languageId], references: [id])
   subject     Subject             @relation(fields: [subjectId], references: [id])

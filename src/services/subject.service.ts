@@ -4,6 +4,7 @@ import type { CreateSubjectRequest } from "../types/requests/create-subject-requ
 import type { UpdateSubjectRequest } from "../types/requests/update-subject-request.model.js";
 import type { SubjectResponse } from "../types/responses/subject-reponse.model.js";
 import type { PaginationData } from "../types/shared/pagination-data.shared.js";
+import { UserRole } from "../types/enums/role.enum.js";
 
 export class SubjectService implements ISubjectService {
   public async createSubject(userId: string, data: CreateSubjectRequest): Promise<SubjectResponse> {
@@ -21,21 +22,35 @@ export class SubjectService implements ISubjectService {
     }
   }
 
-  public async getSubjectsByUser(
+  public async getSubjects(
     userId: string,
+    userRole: UserRole,
     skip: number = 0,
-    take: number = 10
+    take: number = 10,
+    searchTerm?: string
   ): Promise<PaginationData<SubjectResponse>> {
     try {
+      const isTeacher = userRole === UserRole.Teacher;
+
+      const whereClause: any = {
+        ...(isTeacher ? { userId } : {}),
+        ...(searchTerm ? { name: { contains: searchTerm, mode: "insensitive" } } : {}),
+      };
+
       const [subjects, totalCount] = await prisma.$transaction([
         prisma.subject.findMany({
-          where: { userId },
+          where: whereClause,
           skip,
           take,
           orderBy: { id: "desc" },
+          include: {
+            professor: {
+              select: { name: true, lastName: true },
+            },
+          },
         }),
         prisma.subject.count({
-          where: { userId },
+          where: whereClause,
         }),
       ]);
 
@@ -44,7 +59,7 @@ export class SubjectService implements ISubjectService {
         totalCount,
       };
     } catch (error: any) {
-      throw new Error(`Error al obtener la lista de cursos: ${error.message}`);
+      throw new Error(`Error al listar los cursos: ${error.message}`);
     }
   }
 
