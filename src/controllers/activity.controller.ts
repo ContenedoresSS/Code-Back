@@ -4,6 +4,7 @@ import type { UpdateActivityRequest } from "../types/requests/update-activity-re
 import { ActivityService } from "../services/activity.service.js";
 import { parseStringParam } from "../helpers/param.helper.js";
 import { getPaginationParams } from "../helpers/pagination.helper.js";
+import { isBase64 } from "../helpers/base64-validator.helper.js";
 
 const activityService = new ActivityService();
 
@@ -12,6 +13,21 @@ class ActivityController {
     try {
       const data: CreateActivityRequest = req.body;
       const userId = (req as any).user as string;
+
+      if (data.starterCode && Array.isArray(data.starterCode)) {
+        for (const file of data.starterCode) {
+          if (!file.name || typeof file.content !== "string") {
+            return res.status(400).json({
+              error: "Cada archivo del 'starterCode' debe incluir 'name' y 'content'.",
+            });
+          }
+          if (!isBase64(file.content)) {
+            return res.status(400).json({
+              error: `El contenido del archivo base '${file.name}' debe estar codificado estrictamente en Base64.`,
+            });
+          }
+        }
+      }
 
       const newActivity = await activityService.createActivity(userId, data);
       return res.status(201).json(newActivity);
@@ -78,6 +94,21 @@ class ActivityController {
 
       if (!activityId) {
         return res.status(400).json({ error: "El ID de la actividad es requerido." });
+      }
+
+      if (data.starterCode && Array.isArray(data.starterCode)) {
+        for (const file of data.starterCode) {
+          if (!file.name || typeof file.content !== "string") {
+            return res.status(400).json({
+              error: "Cada archivo del 'starterCode' debe incluir 'name' y 'content'.",
+            });
+          }
+          if (!isBase64(file.content)) {
+            return res.status(400).json({
+              error: `El contenido del archivo base '${file.name}' debe estar codificado estrictamente en Base64.`,
+            });
+          }
+        }
       }
 
       const updatedActivity = await activityService.updateActivity(

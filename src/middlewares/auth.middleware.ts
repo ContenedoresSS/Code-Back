@@ -31,6 +31,31 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
   }
 };
 
+export const optionalAuthenticate = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return next();
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    if (!token) {
+      return res.status(401).json({ message: "No token provided or invalid format" });
+    }
+
+    const payload = tokenService.verifyAccessToken(token);
+    (req as any).user = payload.sub;
+
+    if (isUserRole(payload.role)) {
+      (req as any).role = payload.role;
+    }
+  } catch (error) {}
+
+  next();
+};
+
 const isUserRole = (role: string): role is UserRole => {
   return Object.values(UserRole).includes(role as UserRole);
 };

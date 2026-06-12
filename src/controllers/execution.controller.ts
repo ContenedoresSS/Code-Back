@@ -13,10 +13,7 @@ class ExecutionController {
 
       const output = await ExecutionService.runCode(Number(languageId), code, stdin);
 
-      return res.status(200).json({
-        success: true,
-        output,
-      });
+      return res.status(200).json(output);
     } catch (error: any) {
       return res.status(500).json({
         success: false,
@@ -45,10 +42,7 @@ class ExecutionController {
 
       const output = await ExecutionService.runCodeWithFiles(languageId, files, entryPoint, stdin);
 
-      res.status(200).json({
-        success: true,
-        output,
-      });
+      res.status(200).json(output);
     } catch (error: any) {
       if (error.message === "Unsupported language") {
         res.status(400).json({ success: false, error: error.message });
