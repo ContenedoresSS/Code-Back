@@ -2,8 +2,11 @@ import Docker from "dockerode";
 import prisma from "../config/prisma.js";
 import tar from "tar-stream";
 import type { CodeFile } from "../types/models/execution/code-file.model.js";
+import type { ExecutionResult } from "../types/responses/execution-result.response.js";
+import { ExecutionStatus } from "../types/enums/execution-status.enum.js";
+import type { IExecutionService } from "./interfaces/execution.service.interface.js";
 
-class ExecutionService {
+class ExecutionService implements IExecutionService {
   private docker: Docker;
 
   constructor() {
@@ -14,7 +17,7 @@ class ExecutionService {
     });
   }
 
-  public async runCode(languageId: number, code: string, stdin?: string): Promise<string> {
+  public async runCode(languageId: number, code: string, stdin?: string): Promise<ExecutionResult> {
     const language = await prisma.programmingLanguage.findUnique({
       where: { id: languageId },
     });
@@ -22,17 +25,15 @@ class ExecutionService {
     if (!language) throw new Error("Unsupported language");
 
     const fileName = `solution.${language.fileExtension}`;
-    const base64Code = Buffer.from(code).toString("base64");
-    const stdinBase64 = stdin ? Buffer.from(stdin).toString("base64") : undefined;
 
     const files: CodeFile[] = [
       {
         name: fileName,
-        content: base64Code,
+        content: code,
       },
     ];
 
-    return this.runCodeWithFiles(languageId, files, fileName, stdinBase64);
+    return this.runCodeWithFiles(languageId, files, fileName, code);
   }
 
   public async runCodeWithFiles(
@@ -40,7 +41,7 @@ class ExecutionService {
     files: CodeFile[],
     entryPoint: string,
     stdinBase64?: string
-  ): Promise<string> {
+  ): Promise<ExecutionResult> {
     const language = await prisma.programmingLanguage.findUnique({
       where: { id: languageId },
     });
@@ -62,39 +63,74 @@ class ExecutionService {
         MemorySwap: 128 * 1024 * 1024,
         CpuQuota: 50000,
         PidsLimit: 30,
-        AutoRemove: true,
+        AutoRemove: false,
       },
       NetworkDisabled: true,
     });
 
-    const pack = tar.pack();
-    for (const file of files) {
-      const fileBuffer = Buffer.from(file.content, "base64");
-      pack.entry({ name: file.name }, fileBuffer);
-    }
+    try {
+      const pack = tar.pack();
+      for (const file of files) {
+        const fileBuffer = Buffer.from(file.content, "base64");
+        pack.entry({ name: file.name }, fileBuffer);
+      }
 
-    if (stdinBase64) {
-      const stdinBuffer = Buffer.from(stdinBase64, "base64");
-      pack.entry({ name: ".stdin.txt" }, stdinBuffer);
-    }
+      if (stdinBase64) {
+        const stdinBuffer = Buffer.from(stdinBase64, "base64");
+        pack.entry({ name: ".stdin.txt" }, stdinBuffer);
+      }
 
-    pack.finalize();
+      pack.finalize();
+      await container.putArchive(pack, { path: "/app" });
 
-    await container.putArchive(pack, { path: "/app" });
+      const startTime = performance.now();
+      await container.start();
 
-    await container.start();
+      let isTimeout = false;
+      const timeout = setTimeout(async () => {
+        isTimeout = true;
+        try {
+          await container.stop();
+        } catch (e) {}
+      }, 10000);
 
-    const timeout = setTimeout(async () => {
+      const waitResult = await container.wait();
+      clearTimeout(timeout);
+      const timeMs = Math.round(performance.now() - startTime);
+
+      const logs = await container.logs({ stdout: true, stderr: true });
+      const outputString = this.parseDockerLogs(logs);
+
       try {
-        await container.stop();
+        await container.remove();
       } catch (e) {}
-    }, 10000);
 
-    const waitResult = await container.wait();
-    clearTimeout(timeout);
+      let status = ExecutionStatus.SUCCESS;
+      let stderr = "";
 
-    const logs = await container.logs({ stdout: true, stderr: true });
-    return this.parseDockerLogs(logs);
+      // 137 es el código de salida de Linux para SIGKILL
+      if (isTimeout || waitResult.StatusCode === 137) {
+        status = ExecutionStatus.TIME_LIMIT_EXCEEDED;
+      } else if (waitResult.StatusCode !== 0) {
+        stderr = outputString;
+        const lowerOutput = outputString.toLowerCase();
+        status =
+          lowerOutput.includes("error:") || lowerOutput.includes("exception")
+            ? ExecutionStatus.COMPILE_ERROR
+            : ExecutionStatus.RUNTIME_ERROR;
+      }
+
+      return {
+        status,
+        stdout: waitResult.StatusCode === 0 ? outputString : "",
+        stderr,
+        timeMs,
+      };
+    } finally {
+      try {
+        await container.remove({ force: true });
+      } catch (e) {}
+    }
   }
 
   private parseDockerLogs(logs: Buffer): string {
@@ -129,7 +165,7 @@ class ExecutionService {
     }
   }
 
-  public async pullAndPrepImage(imageName: string) {
+  public async pullAndPrepImage(imageName: string): Promise<void> {
     try {
       const stream = await this.docker.pull(imageName);
 

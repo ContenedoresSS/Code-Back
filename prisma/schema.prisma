@@ -57,6 +57,7 @@ model ProgrammingLanguage {
   executionCommand String   @map("execution_command") @db.VarChar(255)
   fileExtension    String   @map("file_extension") @db.VarChar(10)
   activities       Activity[]
+  submissions      Submission[]
 
   @@unique([name, version])
   @@map("programming_languages")
@@ -122,16 +123,24 @@ model TestCase {
 }
 
 model Submission {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId      String   @map("student_id") @db.Uuid
-  activityId     String   @map("activity_id") @db.Uuid
-  finalGrade     Decimal? @map("final_grade") @db.Decimal(5, 2)
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId       String   @map("student_id") @db.Uuid
+  activityId      String   @map("activity_id") @db.Uuid
+  languageId      Int      @map("language_id")
+  codeSnapshot    Json     @map("code_snapshot")
+  finalGrade      Decimal? @map("final_grade") @db.Decimal(5, 2)
+  passedTests     Int      @default(0) @map("passed_tests")
+  totalTests      Int      @default(0) @map("total_tests")
   executionTimeMs Int?     @map("execution_time_ms")
-  status         String   @db.VarChar(50) // Ej: "PENDING", "ACCEPTED", "WRONG_ANSWER", "TIME_LIMIT_EXCEEDED", "COMPILE_ERROR"
-  submittedAt    DateTime @default(now()) @map("submitted_at") @db.Timestamptz
+  status          String   @db.VarChar(50)
+  compilerOutput  String?  @map("compiler_output") @db.Text
+  submittedAt     DateTime @default(now()) @map("submitted_at") @db.Timestamptz
 
-  student  User     @relation(fields: [studentId], references: [id])
-  activity Activity @relation(fields: [activityId], references: [id])
+  student   User                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  activity  Activity            @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  language  ProgrammingLanguage @relation(fields: [languageId], references: [id])
 
+  // Índice compuesto para que validar el límite de intentos sea ultrarrápido (Index Scan)
+  @@index([studentId, activityId])
   @@map("submissions")
 }
