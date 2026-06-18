@@ -26,6 +26,7 @@
     "dockerode": "^5.0.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0",
     "tar-stream": "^3.2.0",
