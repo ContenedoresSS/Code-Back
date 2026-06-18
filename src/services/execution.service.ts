@@ -33,7 +33,7 @@ class ExecutionService implements IExecutionService {
       },
     ];
 
-    return this.runCodeWithFiles(languageId, files, fileName, code);
+    return this.runCodeWithFiles(languageId, files, fileName, stdin ?? "");
   }
 
   public async runCodeWithFiles(
@@ -90,7 +90,7 @@ class ExecutionService implements IExecutionService {
       const timeout = setTimeout(async () => {
         isTimeout = true;
         try {
-          await container.stop();
+          await container.kill();
         } catch (e) {}
       }, 10000);
 
