@@ -283,5 +283,5 @@ El contenedor necesita acceso al socket de Docker del host para crear contenedor
 ## 13. Repositorios relacionados
 
 - Este repositorio (`Code-Back`): backend — API REST
-- **Frontend** (repositorio separado): editor de código que se embebe en Moodle via iframe — consume esta API
+- [**Frontend**](https://github.com/ContenedoresSS/Code-Panel-Frontend): editor de código que se embebe en Moodle via iframe — consume esta API
 - **URL pública**: `https://codepanel.orchfr.duckdns.org` (dominio dinámico para el frontend)
