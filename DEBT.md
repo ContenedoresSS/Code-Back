@@ -351,6 +351,19 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 
 ---
 
+## Pilar 11 — Documentación de API (Swagger/OpenAPI)
+
+### DEBT‑27: OpenAPI spec es standalone, debe migrar a auto‑generación (Fase 2)
+
+- **Archivos**: `docs/api/openapi.yaml`, `src/config/swagger.ts`
+- **Problema**: El spec OpenAPI 3.1 se mantiene manualmente en un archivo YAML. Puede desincronizarse de los tipos y la lógica real del código con el tiempo.
+- **Impacto**: Riesgo de que el contrato documentado no refleje el comportamiento real de la API. El frontend consumiría documentación incorrecta.
+- **Plan de migración**: Cuando se implemente la validación Zod para requests (DEBT‑08), migrar la generación del spec a `@asteasolutions/zod-to-openapi`. Los schemas Zod serán la fuente única de verdad tanto para validación en runtime como para documentación.
+- **Dependencia**: DEBT‑08 debe resolverse primero.
+- **Endpoint del contrato**: `GET /docs/openapi.json` — disponible en todos los entornos. `GET /docs` (Swagger UI) — solo en desarrollo.
+
+---
+
 ## Resumen de prioridades
 
 | Prioridad | DEBTs | Pilar | Acción sugerida |
@@ -365,3 +378,4 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 | **Media** | 19, 21 | BD + auth | Índices, rate limit en login |
 | **Media** | 24, 25, 26 | Negocio | Endpoints de enrollment y submissions |
 | **Baja** | 10, 18, 22, 23 | Testing + DX | Vitest, organizar tipos, CORS en env |
+| **Seguimiento** | 27 | OpenAPI | Migrar a zod-to-openapi cuando se implemente DEBT‑08 |

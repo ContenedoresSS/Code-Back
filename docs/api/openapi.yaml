@@ -1,0 +1,1477 @@
+openapi: 3.1.0
+info:
+  title: Code Panel API
+  version: 1.0.0
+  description: |
+    API REST del sistema de ejecución remota de código y calificación automática
+    para la **UADY** (Yucatán, México). Se integra con **Moodle** vía iframe.
+
+    ### Roles
+    - **God** — administrador de plataforma. Esquiva todas las verificaciones RBAC.
+    - **Teacher** — crea materias, actividades y casos de prueba; revisa entregas.
+    - **Student** — se matricula, escribe y ejecuta código, envía soluciones.
+
+    ### Rate limiting
+    Los endpoints `/execution/*` y `/activity/:id/submit` están limitados a
+    **2 peticiones cada 5 minutos por IP**.
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Desarrollo local
+  - url: https://codepanel.orchfr.duckdns.org/api/v1
+    description: Producción
+
+tags:
+  - name: Auth
+    description: Registro, login y refresh de tokens
+  - name: Execution
+    description: Ejecución de código en sandbox Docker
+  - name: Invitation
+    description: Códigos de invitación (God only)
+  - name: Programming Language
+    description: Lenguajes de programación (God only)
+  - name: User
+    description: Perfil del usuario autenticado
+  - name: Subject
+    description: Materias (Teacher)
+  - name: Activity
+    description: Actividades de código (Teacher)
+  - name: Test Case
+    description: Casos de prueba por actividad (Teacher)
+  - name: Submission
+    description: Envío y evaluación de soluciones
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ══════════════════════════════════════════════
+  #  Auth
+  # ══════════════════════════════════════════════
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrar usuario
+      description: |
+        Registro libre para estudiantes (sin invitationCode).
+        Los profesores requieren un código de invitación válido de un solo uso.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterUserRequest"
+      responses:
+        "201":
+          description: Usuario registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterUserResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Email o identificador ya en uso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Iniciar sesión
+      description: Devuelve token pair (access 4h + refresh 7d).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refrescar access token
+      description: Usa el refresh token para obtener un nuevo token pair.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshSessionRequest"
+      responses:
+        "200":
+          description: Nuevo token pair generado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  # ══════════════════════════════════════════════
+  #  Execution
+  # ══════════════════════════════════════════════
+  /execution/run:
+    post:
+      tags: [Execution]
+      summary: Ejecutar código (un solo archivo)
+      description: |
+        Ejecuta un fragmento de código en un contenedor Docker efímero con sandboxing.
+        **Rate‑limited**: 2 peticiones cada 5 minutos por IP.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [languageId, code]
+              properties:
+                languageId:
+                  type: integer
+                  description: ID del lenguaje de programación
+                  example: 1
+                code:
+                  type: string
+                  description: Código fuente codificado en Base64
+                  example: I2luY2x1ZGUgPGlvc3RyZWFtPgppbnQgbWFpbigpIHsgcmV0dXJuIDA7IH0=
+                stdin:
+                  type: string
+                  description: Entrada estándar codificada en Base64 (opcional)
+                  example: NQo3
+      responses:
+        "200":
+          description: Resultado de la ejecución
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /execution/run-with-files:
+    post:
+      tags: [Execution]
+      summary: Ejecutar código con múltiples archivos
+      description: |
+        Ejecuta múltiples archivos de código en un contenedor Docker efímero.
+        **Rate‑limited**: 2 peticiones cada 5 minutos por IP.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunCodeWithFilesRequest"
+      responses:
+        "200":
+          description: Resultado de la ejecución
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  # ══════════════════════════════════════════════
+  #  Invitation
+  # ══════════════════════════════════════════════
+  /invitation:
+    post:
+      tags: [Invitation]
+      summary: Crear código de invitación
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roleId]
+              properties:
+                roleId:
+                  type: integer
+                  description: ID del rol asociado al código
+                  example: 2
+      responses:
+        "201":
+          description: Código creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    get:
+      tags: [Invitation]
+      summary: Listar códigos de invitación
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Lista paginada de códigos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedInvitations"
+
+  /invitation/{id}:
+    parameters:
+      - $ref: "#/components/parameters/InvitationId"
+    put:
+      tags: [Invitation]
+      summary: Actualizar código de invitación
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isUsed:
+                  type: boolean
+                roleId:
+                  type: integer
+      responses:
+        "200":
+          description: Código actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Invitation]
+      summary: Eliminar código de invitación
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Código eliminado
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════
+  #  Programming Language
+  # ══════════════════════════════════════════════
+  /programming-language:
+    post:
+      tags: [Programming Language]
+      summary: Crear lenguaje de programación
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLanguageRequest"
+      responses:
+        "201":
+          description: Lenguaje creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Language"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    get:
+      tags: [Programming Language]
+      summary: Listar lenguajes de programación
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de lenguajes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Language"
+
+  /programming-language/{id}:
+    parameters:
+      - $ref: "#/components/parameters/LanguageId"
+    get:
+      tags: [Programming Language]
+      summary: Obtener lenguaje por ID
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lenguaje encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Language"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Programming Language]
+      summary: Actualizar lenguaje
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLanguageRequest"
+      responses:
+        "200":
+          description: Lenguaje actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Language"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Programming Language]
+      summary: Eliminar lenguaje
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lenguaje eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Language deleted successfully.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════
+  #  User
+  # ══════════════════════════════════════════════
+  /user/me:
+    get:
+      tags: [User]
+      summary: Obtener perfil del usuario autenticado
+      responses:
+        "200":
+          description: Perfil del usuario
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [User]
+      summary: Actualizar perfil
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    $ref: "#/components/schemas/UserProfile"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Identificador ya en uso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /user/change-password:
+    post:
+      tags: [User]
+      summary: Cambiar contraseña
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          description: Contraseña actualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Contraseña actual incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ══════════════════════════════════════════════
+  #  Subject
+  # ══════════════════════════════════════════════
+  /subject:
+    post:
+      tags: [Subject]
+      summary: Crear materia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubjectRequest"
+      responses:
+        "201":
+          description: Materia creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    get:
+      tags: [Subject]
+      summary: Listar materias
+      description: |
+        Teachers ven solo sus materias. God ve todas.
+      parameters:
+        - $ref: "#/components/parameters/Skip"
+        - $ref: "#/components/parameters/Take"
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Filtrar por nombre (búsqueda parcial, case‑insensitive)
+      responses:
+        "200":
+          description: Lista paginada de materias
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedSubjects"
+
+  /subject/{id}:
+    parameters:
+      - $ref: "#/components/parameters/SubjectId"
+    get:
+      tags: [Subject]
+      summary: Obtener materia
+      responses:
+        "200":
+          description: Materia encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Subject]
+      summary: Actualizar materia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSubjectRequest"
+      responses:
+        "200":
+          description: Materia actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Subject]
+      summary: Eliminar materia
+      responses:
+        "204":
+          description: Materia eliminada
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════
+  #  Activity
+  # ══════════════════════════════════════════════
+  /activity:
+    post:
+      tags: [Activity]
+      summary: Crear actividad de código
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateActivityRequest"
+      responses:
+        "201":
+          description: Actividad creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: Curso o lenguaje no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      tags: [Activity]
+      summary: Listar actividades
+      parameters:
+        - $ref: "#/components/parameters/Skip"
+        - $ref: "#/components/parameters/Take"
+        - name: subjectId
+          in: query
+          schema:
+            type: integer
+          description: Filtrar por materia
+      responses:
+        "200":
+          description: Lista paginada de actividades
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedActivitySummaries"
+
+  /activity/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ActivityId"
+    get:
+      tags: [Activity]
+      summary: Obtener actividad
+      responses:
+        "200":
+          description: Actividad encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Activity]
+      summary: Actualizar actividad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateActivityRequest"
+      responses:
+        "200":
+          description: Actividad actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Activity]
+      summary: Eliminar actividad
+      responses:
+        "204":
+          description: Actividad eliminada
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════
+  #  Activity Workspace
+  # ══════════════════════════════════════════════
+  /activity/{id}/workspace:
+    parameters:
+      - $ref: "#/components/parameters/ActivityId"
+    get:
+      tags: [Activity]
+      summary: Obtener workspace del estudiante
+      description: |
+        Público. Devuelve título, descripción, lenguaje, código inicial,
+        flags de copy/paste, intentos máximos y **solo casos de prueba públicos**.
+        Los casos ocultos aparecen sin input ni expectedOutput.
+      security: []
+      responses:
+        "200":
+          description: Workspace del estudiante
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentWorkspace"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════
+  #  Activity Submission
+  # ══════════════════════════════════════════════
+  /activity/{id}/submit:
+    parameters:
+      - $ref: "#/components/parameters/ActivityId"
+    post:
+      tags: [Submission]
+      summary: Enviar solución para evaluación
+      description: |
+        Evalúa automáticamente el código contra todos los casos de prueba
+        de la actividad.
+
+        - Auth opcional: usuarios no autenticados pueden ejecutar pero sus
+          envíos no se persisten en BD ni se les aplica límite de intentos.
+        - **Rate‑limited**: 2 peticiones cada 5 minutos por IP.
+      security: [] # optional auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [files]
+              properties:
+                files:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/CodeFile"
+                  description: Archivos de código en Base64
+      responses:
+        "200":
+          description: Resultado de la evaluación
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: Límite máximo de intentos alcanzado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  # ══════════════════════════════════════════════
+  #  Test Case
+  # ══════════════════════════════════════════════
+  /activity/{id}/test-case:
+    parameters:
+      - $ref: "#/components/parameters/ActivityId"
+    get:
+      tags: [Test Case]
+      summary: Listar casos de prueba
+      responses:
+        "200":
+          description: Lista de casos de prueba
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestCase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    post:
+      tags: [Test Case]
+      summary: Crear caso de prueba
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTestCaseRequest"
+      responses:
+        "201":
+          description: Caso de prueba creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestCase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /activity/{id}/test-case/{testCaseId}:
+    parameters:
+      - $ref: "#/components/parameters/ActivityId"
+      - $ref: "#/components/parameters/TestCaseId"
+    put:
+      tags: [Test Case]
+      summary: Actualizar caso de prueba
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTestCaseRequest"
+      responses:
+        "200":
+          description: Caso de prueba actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestCase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Test Case]
+      summary: Eliminar caso de prueba
+      responses:
+        "204":
+          description: Caso de prueba eliminado
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+# ══════════════════════════════════════════════
+#  Components
+# ══════════════════════════════════════════════
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Access token JWT (4 horas de validez).
+
+        Se obtiene mediante `POST /auth/login` y se refresca con `POST /auth/refresh`.
+
+  parameters:
+    InvitationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: ID de la invitación
+    LanguageId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: ID del lenguaje de programación
+    SubjectId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: ID de la materia
+    ActivityId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: UUID de la actividad
+    TestCaseId:
+      name: testCaseId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: ID del caso de prueba
+    Skip:
+      name: skip
+      in: query
+      schema:
+        type: integer
+        default: 0
+      description: Registros a saltar (paginación)
+    Take:
+      name: take
+      in: query
+      schema:
+        type: integer
+        default: 10
+      description: Registros por página
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+      description: Número de página
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 10
+      description: Registros por página
+
+  schemas:
+    # ── Shared ──
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Mensaje descriptivo del error
+
+    CodeFile:
+      type: object
+      required: [name, content]
+      properties:
+        name:
+          type: string
+          description: Nombre del archivo con extensión
+          example: main.cpp
+        content:
+          type: string
+          description: Contenido del archivo codificado en Base64
+          example: I2luY2x1ZGUgPGlvc3RyZWFtPgppbnQgbWFpbigpIHsgcmV0dXJuIDA7IH0=
+
+    # ── Auth ──
+    RegisterUserRequest:
+      type: object
+      required: [email, password, name, lastName]
+      properties:
+        email:
+          type: string
+          format: email
+          example: estudiante@uady.mx
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: AdminPassword123!!
+        name:
+          type: string
+          maxLength: 100
+          example: Alan
+        lastName:
+          type: string
+          maxLength: 100
+          example: Turing
+        invitationCode:
+          type: string
+          description: Código de invitación (requerido para Teacher)
+          example: A1B2C3D4
+        identifier:
+          type: string
+          description: Identificador único opcional (matrícula)
+          example: "123456"
+
+    RegisterUserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          example: Student
+
+    LoginRequest:
+      type: object
+      required: [identifier, password]
+      properties:
+        identifier:
+          type: string
+          description: Email o identificador (matrícula)
+          example: admin@admin.com
+        password:
+          type: string
+          format: password
+          example: AdminPassword123!!
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Access token JWT (4 horas)
+        refreshToken:
+          type: string
+          description: Refresh token JWT (7 días)
+
+    RefreshSessionRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    # ── Execution ──
+    RunCodeWithFilesRequest:
+      type: object
+      required: [languageId, files, entryPoint]
+      properties:
+        languageId:
+          type: integer
+          example: 1
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeFile"
+        entryPoint:
+          type: string
+          description: Nombre del archivo principal a ejecutar
+          example: main.cpp
+        stdin:
+          type: string
+          description: Entrada estándar codificada en Base64 (opcional)
+          example: NQo3
+
+    ExecutionResult:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/ExecutionStatus"
+        stdout:
+          type: string
+          description: Salida estándar del programa
+        stderr:
+          type: string
+          description: Salida de error (vacío si exitoso)
+        timeMs:
+          type: integer
+          description: Tiempo de ejecución en milisegundos
+          example: 342
+
+    ExecutionStatus:
+      type: string
+      enum: [SUCCESS, TIME_LIMIT_EXCEEDED, RUNTIME_ERROR, COMPILE_ERROR]
+
+    # ── Evaluation ──
+    EvaluationResult:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/SubmissionStatus"
+        finalGrade:
+          type: number
+          description: Calificación sobre 100 (0 si hubo error)
+          example: 100
+        passedTests:
+          type: integer
+          example: 3
+        totalTests:
+          type: integer
+          example: 4
+        executionTimeMs:
+          type: integer
+          example: 1450
+        compilerOutput:
+          type: [string, "null"]
+          
+          description: Mensaje de error si hubo fallo de compilación
+        languageId:
+          type: integer
+
+    SubmissionStatus:
+      type: string
+      enum:
+        [PENDING, ACCEPTED, WRONG_ANSWER, TIME_LIMIT_EXCEEDED, COMPILE_ERROR, RUNTIME_ERROR]
+
+    # ── Invitation ──
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+          example: A1B2C3D4
+        roleId:
+          type: integer
+        isUsed:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        role:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+
+    PaginatedInvitations:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invitation"
+        totalCount:
+          type: integer
+
+    # ── Language ──
+    CreateLanguageRequest:
+      type: object
+      required: [name, editorIdentifier, version, dockerImage, executionCommand, fileExtension]
+      properties:
+        name:
+          type: string
+          example: C++
+        editorIdentifier:
+          type: string
+          example: cpp
+        version:
+          type: string
+          example: "13.2"
+        dockerImage:
+          type: string
+          example: gcc:13.2
+        executionCommand:
+          type: string
+          example: g++ -o solution *.cpp && ./solution
+        fileExtension:
+          type: string
+          example: cpp
+
+    UpdateLanguageRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        editorIdentifier:
+          type: string
+        version:
+          type: string
+        dockerImage:
+          type: string
+        executionCommand:
+          type: string
+        fileExtension:
+          type: string
+
+    Language:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        editorIdentifier:
+          type: string
+        version:
+          type: string
+        dockerImage:
+          type: string
+        executionCommand:
+          type: string
+        fileExtension:
+          type: string
+
+    # ── User ──
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        lastName:
+          type: string
+        identifier:
+          type: string
+          
+        createdAt:
+          type: string
+          format: date-time
+        role:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        lastName:
+          type: string
+        identifier:
+          type: string
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          format: password
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+
+    # ── Subject ──
+    CreateSubjectRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: Estructuras de Datos
+
+    UpdateSubjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+
+    Subject:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        professor:
+          type: object
+          properties:
+            name:
+              type: string
+            lastName:
+              type: string
+
+    PaginatedSubjects:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subject"
+        totalCount:
+          type: integer
+
+    # ── Activity ──
+    CreateActivityRequest:
+      type: object
+      required: [subjectId, languageId, title]
+      properties:
+        subjectId:
+          type: integer
+          description: ID de la materia a la que pertenece
+        languageId:
+          type: integer
+          description: ID del lenguaje de programación
+        title:
+          type: string
+          maxLength: 200
+          example: Suma de dos números
+        description:
+          type: string
+          
+          example: Escribe un programa que lea dos enteros y devuelva su suma.
+        starterCode:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeFile"
+          description: Archivos de código inicial para el estudiante
+        maxAttempts:
+          type: integer
+          default: 0
+          description: Límite de envíos (0 = ilimitado)
+        allowCopy:
+          type: boolean
+          default: true
+        allowPaste:
+          type: boolean
+          default: true
+
+    UpdateActivityRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          
+        starterCode:
+          type: array
+          items:
+            $ref: "#/components/schemas/CodeFile"
+        maxAttempts:
+          type: integer
+        allowCopy:
+          type: boolean
+        allowPaste:
+          type: boolean
+
+    Activity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        professorId:
+          type: string
+          format: uuid
+        languageId:
+          type: integer
+        subjectId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          
+        starterCode:
+          type: array
+          
+          items:
+            $ref: "#/components/schemas/CodeFile"
+        maxAttempts:
+          type: integer
+        allowCopy:
+          type: boolean
+        allowPaste:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    ActivitySummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        professorId:
+          type: string
+          format: uuid
+        languageId:
+          type: integer
+        subjectId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          
+        createdAt:
+          type: string
+          format: date-time
+
+    PaginatedActivitySummaries:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivitySummary"
+        totalCount:
+          type: integer
+
+    # ── Test Case ──
+    CreateTestCaseRequest:
+      type: object
+      required: [expectedOutput]
+      properties:
+        input:
+          type: string
+          
+          description: Entrada codificada en Base64 (opcional)
+        expectedOutput:
+          type: string
+          description: Salida esperada codificada en Base64
+        isHidden:
+          type: boolean
+          default: false
+          description: Si es true, el estudiante no ve input ni output esperado
+
+    UpdateTestCaseRequest:
+      type: object
+      properties:
+        input:
+          type: string
+          
+        expectedOutput:
+          type: string
+        isHidden:
+          type: boolean
+
+    TestCase:
+      type: object
+      properties:
+        id:
+          type: integer
+        activityId:
+          type: string
+          format: uuid
+        input:
+          type: string
+          
+        expectedOutput:
+          type: string
+        isHidden:
+          type: boolean
+
+    # ── Student Workspace ──
+    StudentWorkspace:
+      type: object
+      properties:
+        activityId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          
+        language:
+          type: object
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            fileExtension:
+              type: string
+        starterCode:
+          type: array
+          
+          items:
+            $ref: "#/components/schemas/CodeFile"
+        allowCopy:
+          type: boolean
+        allowPaste:
+          type: boolean
+        maxAttempts:
+          type: integer
+        testCases:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicTestCase"
+
+    PublicTestCase:
+      type: object
+      properties:
+        id:
+          type: integer
+        isHidden:
+          type: boolean
+        input:
+          type: string
+          
+          description: Solo presente si isHidden es false
+        expectedOutput:
+          type: string
+          description: Solo presente si isHidden es false
+
+  responses:
+    BadRequest:
+      description: Parámetros inválidos o faltantes
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Token inválido, expirado o ausente
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    TooManyRequests:
+      description: Rate limit excedido (2 peticiones / 5 min)
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              error:
+                type: string
+                example: "Has excedido el límite de ejecuciones. Por favor, espera cinco antes de volver a intentarlo."
+    ServerError:
+      description: Error interno del servidor
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
