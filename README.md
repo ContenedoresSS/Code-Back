@@ -182,5 +182,5 @@ Guía completa en [`DEPLOY.md`](./DEPLOY.md).
 ## Repositorios relacionados
 
 - **Backend** (este repo) — API REST
-- **Frontend** — Editor de código embebido en Moodle (repositorio separado)
+- [**Frontend**](https://github.com/ContenedoresSS/Code-Panel-Frontend) — Editor de código embebido en Moodle via iframe
 - **URL pública** — `https://codepanel.orchfr.duckdns.org`
