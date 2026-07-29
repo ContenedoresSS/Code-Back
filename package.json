@@ -11,7 +11,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,js}\" \"*.json\"",
     "db:init": "npx prisma generate && prisma migrate dev && prisma db seed",
     "db:migrate": "prisma migrate dev",
-    "db:status": "prisma migrate status"
+    "db:status": "prisma migrate status",
+    "docs:validate": "redocly lint docs/api/openapi.yaml"
   },
   "keywords": [],
   "author": "",
@@ -29,10 +30,13 @@
     "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0",
+    "swagger-ui-express": "^5.0.1",
     "tar-stream": "^3.2.0",
+    "yaml": "^2.9.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@redocly/cli": "^2.41.2",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/dockerode": "^4.0.1",
@@ -40,6 +44,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.0",
     "@types/pg": "^8.20.0",
+    "@types/swagger-ui-express": "^4.1.8",
     "@types/tar-stream": "^3.1.4",
     "prettier": "3.8.3",
     "prisma": "^7.7.0",
