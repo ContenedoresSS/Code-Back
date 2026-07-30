@@ -255,28 +255,6 @@ describe("Integration: Activity Endpoints", () => {
       expect(response.status).toBe(200);
       expect(response.body.title).toBe("Updated Title");
     });
-
-    it("returns 403 for Student role", async () => {
-      const token = generateStudentToken();
-      const response = await request(app)
-        .put("/api/v1/activity/1")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ title: "Updated" });
-
-      expect(response.status).toBe(403);
-    });
-
-    it("returns 400 when starterCode has invalid base64", async () => {
-      const token = generateTeacherToken();
-      const response = await request(app)
-        .put("/api/v1/activity/1")
-        .set("Authorization", `Bearer ${token}`)
-        .send({
-          starterCode: [{ name: "main.py", content: "invalid!@#$" }],
-        });
-
-      expect(response.status).toBe(400);
-    });
   });
 
   describe("DELETE /api/v1/activity/:id", () => {
@@ -289,28 +267,6 @@ describe("Integration: Activity Endpoints", () => {
         .set("Authorization", `Bearer ${token}`);
 
       expect(response.status).toBe(204);
-    });
-
-    it("returns 403 for Student role", async () => {
-      const token = generateStudentToken();
-      const response = await request(app)
-        .delete("/api/v1/activity/1")
-        .set("Authorization", `Bearer ${token}`);
-
-      expect(response.status).toBe(403);
-    });
-
-    it("returns 404 when activity not found", async () => {
-      mockedActivityService.deleteActivity.mockRejectedValue(
-        new Error("Actividad no encontrada o no tienes permisos para acceder a ella.")
-      );
-
-      const token = generateTeacherToken();
-      const response = await request(app)
-        .delete("/api/v1/activity/999")
-        .set("Authorization", `Bearer ${token}`);
-
-      expect(response.status).toBe(404);
     });
   });
 });

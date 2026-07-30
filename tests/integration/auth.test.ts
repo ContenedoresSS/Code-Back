@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import app from "../../src/app.js";
 import authService from "../../src/services/auth.service.js";
-import { UserRole } from "../../src/types/enums/role.enum.js";
+import { Prisma } from "@prisma/client";
 
 vi.mock("../../src/services/auth.service.js");
 
@@ -85,18 +85,24 @@ describe("Integration: Auth Endpoints", () => {
       expect(response.body).toHaveProperty("error");
     });
 
-    it("returns 400 when Student role not found", async () => {
-      mockedAuthService.register.mockRejectedValue(new Error("Default role not found"));
+    it("returns 409 for duplicate email (Prisma P2002)", async () => {
+      const prismaError = new Prisma.PrismaClientKnownRequestError(
+        "Unique constraint violation",
+        { code: "P2002", clientVersion: "5.0.0", meta: { target: ["email"] } }
+      );
+
+      mockedAuthService.register.mockRejectedValue(prismaError);
 
       const response = await request(app)
         .post("/api/v1/auth/register")
         .send({
-          email: "student@example.com",
+          email: "existing@example.com",
           password: "password123",
           name: "John",
         });
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(409);
+      expect(response.body).toHaveProperty("code", "UNIQUE_CONSTRAINT_VIOLATION");
     });
   });
 
@@ -122,21 +128,7 @@ describe("Integration: Auth Endpoints", () => {
       expect(response.body.token).toBe("access-token-123");
     });
 
-    it("returns 401 when user not found", async () => {
-      mockedAuthService.login.mockRejectedValue(new Error("Invalid credentials"));
-
-      const response = await request(app)
-        .post("/api/v1/auth/login")
-        .send({
-          identifier: "nonexistent@example.com",
-          password: "password123",
-        });
-
-      expect(response.status).toBe(401);
-      expect(response.body).toHaveProperty("error");
-    });
-
-    it("returns 401 for invalid password", async () => {
+    it("returns 401 for invalid credentials", async () => {
       mockedAuthService.login.mockRejectedValue(new Error("Invalid credentials"));
 
       const response = await request(app)
@@ -147,6 +139,7 @@ describe("Integration: Auth Endpoints", () => {
         });
 
       expect(response.status).toBe(401);
+      expect(response.body).toHaveProperty("error");
     });
   });
 

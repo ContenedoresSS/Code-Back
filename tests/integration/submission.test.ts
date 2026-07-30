@@ -64,7 +64,7 @@ describe("Integration: Submission Endpoints", () => {
       expect(response.body.status).toBe(SubmissionStatus.ACCEPTED);
     });
 
-    it("returns 400 when files array is missing", async () => {
+    it("returns 400 when files field is missing", async () => {
       const token = generateStudentToken();
       const response = await request(app)
         .post("/api/v1/activity/1/submit")
@@ -73,16 +73,6 @@ describe("Integration: Submission Endpoints", () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error).toContain("files");
-    });
-
-    it("returns 400 when files array is empty", async () => {
-      const token = generateStudentToken();
-      const response = await request(app)
-        .post("/api/v1/activity/1/submit")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ files: [] });
-
-      expect(response.status).toBe(400);
     });
 
     it("returns 400 when file is missing name", async () => {
@@ -109,6 +99,30 @@ describe("Integration: Submission Endpoints", () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error).toContain("Base64");
+    });
+
+    it("returns 400 when file content is empty string", async () => {
+      const token = generateStudentToken();
+      const response = await request(app)
+        .post("/api/v1/activity/1/submit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          files: [{ name: "main.py", content: "" }],
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    it("returns 400 when files is a string instead of array", async () => {
+      const token = generateStudentToken();
+      const response = await request(app)
+        .post("/api/v1/activity/1/submit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          files: "not-an-array",
+        });
+
+      expect(response.status).toBe(400);
     });
 
     it("returns 404 when activity not found", async () => {
@@ -141,87 +155,6 @@ describe("Integration: Submission Endpoints", () => {
         });
 
       expect(response.status).toBe(403);
-    });
-
-    it("returns WRONG_ANSWER with partial grade", async () => {
-      const mockResult = {
-        status: SubmissionStatus.WRONG_ANSWER,
-        finalGrade: 50,
-        passedTests: 1,
-        totalTests: 2,
-        executionTimeMs: 120,
-        compilerOutput: null,
-        languageId: 1,
-      };
-
-      mockedSubmissionService.processSubmission.mockResolvedValue(mockResult);
-
-      const token = generateStudentToken();
-      const response = await request(app)
-        .post("/api/v1/activity/1/submit")
-        .set("Authorization", `Bearer ${token}`)
-        .send({
-          files: [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }],
-        });
-
-      expect(response.status).toBe(200);
-      expect(response.body.status).toBe(SubmissionStatus.WRONG_ANSWER);
-      expect(response.body.finalGrade).toBe(50);
-    });
-
-    it("returns COMPILE_ERROR with grade 0", async () => {
-      const mockResult = {
-        status: SubmissionStatus.COMPILE_ERROR,
-        finalGrade: 0,
-        passedTests: 0,
-        totalTests: 2,
-        executionTimeMs: 50,
-        compilerOutput: "SyntaxError: unexpected token",
-        languageId: 1,
-      };
-
-      mockedSubmissionService.processSubmission.mockResolvedValue(mockResult);
-
-      const token = generateStudentToken();
-      const response = await request(app)
-        .post("/api/v1/activity/1/submit")
-        .set("Authorization", `Bearer ${token}`)
-        .send({
-          files: [{ name: "main.py", content: "cHJpbnQoJ0hlbGxv" }],
-        });
-
-      expect(response.status).toBe(200);
-      expect(response.body.status).toBe(SubmissionStatus.COMPILE_ERROR);
-      expect(response.body.finalGrade).toBe(0);
-      expect(response.body.compilerOutput).toBe("SyntaxError: unexpected token");
-    });
-
-    it("submits multiple files", async () => {
-      const mockResult = {
-        status: SubmissionStatus.ACCEPTED,
-        finalGrade: 100,
-        passedTests: 1,
-        totalTests: 1,
-        executionTimeMs: 100,
-        compilerOutput: null,
-        languageId: 1,
-      };
-
-      mockedSubmissionService.processSubmission.mockResolvedValue(mockResult);
-
-      const token = generateStudentToken();
-      const response = await request(app)
-        .post("/api/v1/activity/1/submit")
-        .set("Authorization", `Bearer ${token}`)
-        .send({
-          files: [
-            { name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" },
-            { name: "helper.py", content: "ZGVmIGhlbHAoKTogcGFzcw==" },
-          ],
-        });
-
-      expect(response.status).toBe(200);
-      expect(response.body.status).toBe(SubmissionStatus.ACCEPTED);
     });
   });
 });

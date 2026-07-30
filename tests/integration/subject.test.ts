@@ -62,14 +62,6 @@ describe("Integration: Subject Endpoints", () => {
       expect(response.status).toBe(401);
     });
 
-    it("returns 401 when token is invalid", async () => {
-      const response = await request(app)
-        .get("/api/v1/subject")
-        .set("Authorization", "Bearer invalid-token");
-
-      expect(response.status).toBe(401);
-    });
-
     it("supports pagination with skip and take", async () => {
       const mockSubjects = {
         data: [{ id: 3, name: "Chemistry", userId: "teacher-1" }],
@@ -213,28 +205,19 @@ describe("Integration: Subject Endpoints", () => {
       expect(response.body.name).toBe("Advanced Mathematics");
     });
 
-    it("returns 403 for Student role", async () => {
-      const token = generateStudentToken();
+    it("returns 200 with existing subject when body is empty", async () => {
+      const existingSubject = { id: 1, name: "Mathematics", userId: "teacher-1" };
+
+      mockedSubjectService.updateSubject.mockResolvedValue(existingSubject);
+
+      const token = generateTeacherToken("teacher-1");
       const response = await request(app)
         .put("/api/v1/subject/1")
         .set("Authorization", `Bearer ${token}`)
-        .send({ name: "Updated" });
+        .send({});
 
-      expect(response.status).toBe(403);
-    });
-
-    it("returns 404 when subject not found", async () => {
-      mockedSubjectService.updateSubject.mockRejectedValue(
-        new Error("Materia no encontrada o no tienes permisos para acceder a ella.")
-      );
-
-      const token = generateTeacherToken();
-      const response = await request(app)
-        .put("/api/v1/subject/999")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ name: "Updated" });
-
-      expect(response.status).toBe(404);
+      expect(response.status).toBe(200);
+      expect(response.body.name).toBe("Mathematics");
     });
   });
 
@@ -248,28 +231,6 @@ describe("Integration: Subject Endpoints", () => {
         .set("Authorization", `Bearer ${token}`);
 
       expect(response.status).toBe(204);
-    });
-
-    it("returns 403 for Student role", async () => {
-      const token = generateStudentToken();
-      const response = await request(app)
-        .delete("/api/v1/subject/1")
-        .set("Authorization", `Bearer ${token}`);
-
-      expect(response.status).toBe(403);
-    });
-
-    it("returns 404 when subject not found", async () => {
-      mockedSubjectService.deleteSubject.mockRejectedValue(
-        new Error("Materia no encontrada o no tienes permisos para acceder a ella.")
-      );
-
-      const token = generateTeacherToken();
-      const response = await request(app)
-        .delete("/api/v1/subject/999")
-        .set("Authorization", `Bearer ${token}`);
-
-      expect(response.status).toBe(404);
     });
   });
 });

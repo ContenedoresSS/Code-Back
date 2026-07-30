@@ -175,18 +175,23 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 
 ---
 
-## Pilar 4 — Testing (inexistente)
+## Pilar 4 — Testing
 
-### DEBT‑10: Cero tests
+### ~~DEBT‑10: Cero tests~~ ✅ RESUELTO
 
-- **Archivos**: `package.json:8` → `"test": "echo \"Error: no test specified\" && exit 1"`
-- **Problema**: No hay tests unitarios, de integración ni end‑to‑end. El 100% de la validación es manual.
-- **Impacto**: Cada cambio es un riesgo de regresión. Imposible hacer refactors seguros (ej. migrar a DI).
-- **Recomendación**:
-  1. Agregar `vitest` + `supertest` + `testcontainers`.
-  2. Empezar por tests de integración de alto valor: `POST /execution/run` y `POST /activity/:id/submit`.
-  3. Tests unitarios para `evaluation.service.ts` y `execution.service.ts` con mocks de Docker.
-  4. Establecer un mínimo de cobertura (ej. 60%) como calidad objetivo.
+- **Resuelto en**: Sesión de testing completa con Vitest + supertest
+- **Solución implementada**:
+  - Framework: Vitest 4.x con cobertura V8
+  - 187 tests distribuidos en 19 archivos
+  - **Unit tests**: Helpers (base64, pagination, param), Services (token, evaluation, user, invitation, auth, subject, activity, test-case, submission), Middlewares (auth, rbac)
+  - **Integration tests**: Endpoints HTTP completos (auth, subject, activity, submission) con supertest
+  - **Edge cases**: ReDoS en base64, valores extremos en paginación, IDs flotantes, roles con case incorrecto, RBAC con array vacío
+  - **Fix aplicado**: Regex de `isBase64` corregido para aceptar base64 sin padding (RFC 4648)
+  - **Comandos disponibles**:
+    - `npm test` — Modo watch
+    - `npm run test:run` — Ejecución única
+    - `npm run test:coverage` — Con reporte de cobertura
+- **Nota**: Los tests congelan el comportamiento actual del sistema, permitiendo refactorizaciones seguras (ej. migración a DI).
 
 ---
 
@@ -364,4 +369,4 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 | **Media** | 16, 17 | Observabilidad | pino, health check |
 | **Media** | 19, 21 | BD + auth | Índices, rate limit en login |
 | **Media** | 24, 25, 26 | Negocio | Endpoints de enrollment y submissions |
-| **Baja** | 10, 18, 22, 23 | Testing + DX | Vitest, organizar tipos, CORS en env |
+| **Baja** | 18, 22, 23 | DX | Organizar tipos, CORS en env |
