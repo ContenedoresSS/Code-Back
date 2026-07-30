@@ -10,5 +10,6 @@ export default defineConfig({
       include: ["src/**/*.ts"],
       exclude: ["src/config/**", "src/types/**", "src/app.ts"],
     },
+    setupFiles: ["tests/integration/setup.ts"],
   },
 });

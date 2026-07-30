@@ -29,7 +29,10 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use("/api/v1", v1Routes);
 
+export default app;
+
 const main = async () => {
+  if (ENV.NODE_ENV === "test") return;
   try {
     app.listen(PORT, () => {
       console.log(`API is runing in the port: ${PORT}`);
