@@ -50,6 +50,7 @@ paths:
   # ══════════════════════════════════════════════
   /auth/register:
     post:
+      operationId: authRegister
       tags: [Auth]
       summary: Registrar usuario
       description: |
@@ -80,6 +81,7 @@ paths:
 
   /auth/login:
     post:
+      operationId: authLogin
       tags: [Auth]
       summary: Iniciar sesión
       description: Devuelve token pair (access 4h + refresh 7d).
@@ -102,6 +104,7 @@ paths:
 
   /auth/refresh:
     post:
+      operationId: authRefresh
       tags: [Auth]
       summary: Refrescar access token
       description: Usa el refresh token para obtener un nuevo token pair.
@@ -127,6 +130,7 @@ paths:
   # ══════════════════════════════════════════════
   /execution/run:
     post:
+      operationId: executionRun
       tags: [Execution]
       summary: Ejecutar código (un solo archivo)
       description: |
@@ -169,6 +173,7 @@ paths:
 
   /execution/run-with-files:
     post:
+      operationId: executionRunWithFiles
       tags: [Execution]
       summary: Ejecutar código con múltiples archivos
       description: |
@@ -200,6 +205,7 @@ paths:
   # ══════════════════════════════════════════════
   /invitation:
     post:
+      operationId: invitationCreate
       tags: [Invitation]
       summary: Crear código de invitación
       security:
@@ -228,6 +234,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     get:
+      operationId: invitationList
       tags: [Invitation]
       summary: Listar códigos de invitación
       security:
@@ -242,11 +249,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedInvitations"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /invitation/{id}:
     parameters:
       - $ref: "#/components/parameters/InvitationId"
     put:
+      operationId: invitationUpdate
       tags: [Invitation]
       summary: Actualizar código de invitación
       security:
@@ -274,6 +286,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: invitationDelete
       tags: [Invitation]
       summary: Eliminar código de invitación
       security:
@@ -289,6 +302,7 @@ paths:
   # ══════════════════════════════════════════════
   /programming-language:
     post:
+      operationId: programmingLanguageCreate
       tags: [Programming Language]
       summary: Crear lenguaje de programación
       security:
@@ -309,6 +323,7 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
     get:
+      operationId: programmingLanguageList
       tags: [Programming Language]
       summary: Listar lenguajes de programación
       security:
@@ -322,11 +337,16 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Language"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /programming-language/{id}:
     parameters:
       - $ref: "#/components/parameters/LanguageId"
     get:
+      operationId: programmingLanguageGetById
       tags: [Programming Language]
       summary: Obtener lenguaje por ID
       security:
@@ -341,6 +361,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     put:
+      operationId: programmingLanguageUpdate
       tags: [Programming Language]
       summary: Actualizar lenguaje
       security:
@@ -363,6 +384,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: programmingLanguageDelete
       tags: [Programming Language]
       summary: Eliminar lenguaje
       security:
@@ -388,6 +410,7 @@ paths:
   # ══════════════════════════════════════════════
   /user/me:
     get:
+      operationId: userGetProfile
       tags: [User]
       summary: Obtener perfil del usuario autenticado
       responses:
@@ -400,6 +423,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
     patch:
+      operationId: userUpdateProfile
       tags: [User]
       summary: Actualizar perfil
       requestBody:
@@ -433,6 +457,7 @@ paths:
 
   /user/change-password:
     post:
+      operationId: userChangePassword
       tags: [User]
       summary: Cambiar contraseña
       requestBody:
@@ -467,6 +492,7 @@ paths:
   # ══════════════════════════════════════════════
   /subject:
     post:
+      operationId: subjectCreate
       tags: [Subject]
       summary: Crear materia
       requestBody:
@@ -485,6 +511,7 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
     get:
+      operationId: subjectList
       tags: [Subject]
       summary: Listar materias
       description: |
@@ -504,11 +531,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedSubjects"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /subject/{id}:
     parameters:
       - $ref: "#/components/parameters/SubjectId"
     get:
+      operationId: subjectGetById
       tags: [Subject]
       summary: Obtener materia
       responses:
@@ -521,6 +553,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     put:
+      operationId: subjectUpdate
       tags: [Subject]
       summary: Actualizar materia
       requestBody:
@@ -541,6 +574,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: subjectDelete
       tags: [Subject]
       summary: Eliminar materia
       responses:
@@ -554,6 +588,7 @@ paths:
   # ══════════════════════════════════════════════
   /activity:
     post:
+      operationId: activityCreate
       tags: [Activity]
       summary: Crear actividad de código
       requestBody:
@@ -578,6 +613,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
     get:
+      operationId: activityList
       tags: [Activity]
       summary: Listar actividades
       parameters:
@@ -595,11 +631,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PaginatedActivitySummaries"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /activity/{id}:
     parameters:
       - $ref: "#/components/parameters/ActivityId"
     get:
+      operationId: activityGetById
       tags: [Activity]
       summary: Obtener actividad
       responses:
@@ -612,6 +653,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     put:
+      operationId: activityUpdate
       tags: [Activity]
       summary: Actualizar actividad
       requestBody:
@@ -632,6 +674,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: activityDelete
       tags: [Activity]
       summary: Eliminar actividad
       responses:
@@ -647,6 +690,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ActivityId"
     get:
+      operationId: activityGetWorkspace
       tags: [Activity]
       summary: Obtener workspace del estudiante
       description: |
@@ -671,6 +715,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ActivityId"
     post:
+      operationId: activitySubmit
       tags: [Submission]
       summary: Enviar solución para evaluación
       description: |
@@ -721,6 +766,7 @@ paths:
     parameters:
       - $ref: "#/components/parameters/ActivityId"
     get:
+      operationId: testCaseList
       tags: [Test Case]
       summary: Listar casos de prueba
       responses:
@@ -735,6 +781,7 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
     post:
+      operationId: testCaseCreate
       tags: [Test Case]
       summary: Crear caso de prueba
       requestBody:
@@ -758,6 +805,7 @@ paths:
       - $ref: "#/components/parameters/ActivityId"
       - $ref: "#/components/parameters/TestCaseId"
     put:
+      operationId: testCaseUpdate
       tags: [Test Case]
       summary: Actualizar caso de prueba
       requestBody:
@@ -778,6 +826,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
+      operationId: testCaseDelete
       tags: [Test Case]
       summary: Eliminar caso de prueba
       responses:
@@ -869,6 +918,8 @@ components:
   schemas:
     # ── Shared ──
     Error:
+      title: Error
+      description: Respuesta de error estándar
       type: object
       properties:
         error:
@@ -876,6 +927,8 @@ components:
           description: Mensaje descriptivo del error
 
     CodeFile:
+      title: CodeFile
+      description: Archivo de código fuente codificado en Base64
       type: object
       required: [name, content]
       properties:
@@ -890,25 +943,31 @@ components:
 
     # ── Auth ──
     RegisterUserRequest:
+      title: RegisterUserRequest
+      description: Datos para registrar un nuevo usuario
       type: object
       required: [email, password, name, lastName]
       properties:
         email:
           type: string
           format: email
+          description: Correo electrónico del usuario
           example: estudiante@uady.mx
         password:
           type: string
           format: password
           minLength: 8
+          description: Contraseña (mínimo 8 caracteres)
           example: AdminPassword123!!
         name:
           type: string
           maxLength: 100
+          description: Nombre del usuario
           example: Alan
         lastName:
           type: string
           maxLength: 100
+          description: Apellido del usuario
           example: Turing
         invitationCode:
           type: string
@@ -920,22 +979,31 @@ components:
           example: "123456"
 
     RegisterUserResponse:
+      title: RegisterUserResponse
+      description: Datos del usuario registrado exitosamente
       type: object
       properties:
         id:
           type: string
           format: uuid
+          description: ID único del usuario
         email:
           type: string
+          description: Correo electrónico
         name:
           type: string
+          description: Nombre del usuario
         lastName:
           type: string
+          description: Apellido del usuario
         role:
           type: string
+          description: Rol asignado al usuario
           example: Student
 
     LoginRequest:
+      title: LoginRequest
+      description: Credenciales para iniciar sesión
       type: object
       required: [identifier, password]
       properties:
@@ -946,9 +1014,12 @@ components:
         password:
           type: string
           format: password
+          description: Contraseña del usuario
           example: AdminPassword123!!
 
     LoginResponse:
+      title: LoginResponse
+      description: Tokens de autenticación JWT
       type: object
       properties:
         token:
@@ -959,22 +1030,29 @@ components:
           description: Refresh token JWT (7 días)
 
     RefreshSessionRequest:
+      title: RefreshSessionRequest
+      description: Solicitud para refrescar tokens
       type: object
       required: [refreshToken]
       properties:
         refreshToken:
           type: string
+          description: Refresh token JWT válido
 
     # ── Execution ──
     RunCodeWithFilesRequest:
+      title: RunCodeWithFilesRequest
+      description: Solicitud para ejecutar código con múltiples archivos
       type: object
       required: [languageId, files, entryPoint]
       properties:
         languageId:
           type: integer
+          description: ID del lenguaje de programación
           example: 1
         files:
           type: array
+          description: Archivos de código a ejecutar
           items:
             $ref: "#/components/schemas/CodeFile"
         entryPoint:
@@ -987,6 +1065,8 @@ components:
           example: NQo3
 
     ExecutionResult:
+      title: ExecutionResult
+      description: Resultado de la ejecución de código
       type: object
       properties:
         status:
@@ -1003,11 +1083,15 @@ components:
           example: 342
 
     ExecutionStatus:
+      title: ExecutionStatus
+      description: Estado de la ejecución de código
       type: string
       enum: [SUCCESS, TIME_LIMIT_EXCEEDED, RUNTIME_ERROR, COMPILE_ERROR]
 
     # ── Evaluation ──
     EvaluationResult:
+      title: EvaluationResult
+      description: Resultado de la evaluación de una solución
       type: object
       properties:
         status:
@@ -1018,43 +1102,56 @@ components:
           example: 100
         passedTests:
           type: integer
+          description: Número de casos de prueba pasados
           example: 3
         totalTests:
           type: integer
+          description: Número total de casos de prueba
           example: 4
         executionTimeMs:
           type: integer
+          description: Tiempo total de ejecución en milisegundos
           example: 1450
         compilerOutput:
           type: [string, "null"]
-          
           description: Mensaje de error si hubo fallo de compilación
         languageId:
           type: integer
+          description: ID del lenguaje de programación
 
     SubmissionStatus:
+      title: SubmissionStatus
+      description: Estado de la evaluación de una solución
       type: string
       enum:
         [PENDING, ACCEPTED, WRONG_ANSWER, TIME_LIMIT_EXCEEDED, COMPILE_ERROR, RUNTIME_ERROR]
 
     # ── Invitation ──
     Invitation:
+      title: Invitation
+      description: Código de invitación para registrar profesores
       type: object
       properties:
         id:
           type: integer
+          description: ID único de la invitación
         code:
           type: string
+          description: Código alfanumérico de 8 caracteres
           example: A1B2C3D4
         roleId:
           type: integer
+          description: ID del rol asociado
         isUsed:
           type: boolean
+          description: Indica si el código ya fue utilizado
         createdAt:
           type: string
           format: date-time
+          description: Fecha de creación
         role:
           type: object
+          description: Rol asociado a la invitación
           properties:
             id:
               type: integer
@@ -1062,94 +1159,131 @@ components:
               type: string
 
     PaginatedInvitations:
+      title: PaginatedInvitations
+      description: Lista paginada de códigos de invitación
       type: object
       properties:
         data:
           type: array
+          description: Arreglo de invitaciones
           items:
             $ref: "#/components/schemas/Invitation"
         totalCount:
           type: integer
+          description: Total de registros disponibles
 
     # ── Language ──
     CreateLanguageRequest:
+      title: CreateLanguageRequest
+      description: Datos para crear un lenguaje de programación
       type: object
       required: [name, editorIdentifier, version, dockerImage, executionCommand, fileExtension]
       properties:
         name:
           type: string
+          description: Nombre del lenguaje
           example: C++
         editorIdentifier:
           type: string
+          description: Identificador para el editor de código
           example: cpp
         version:
           type: string
+          description: Versión del lenguaje
           example: "13.2"
         dockerImage:
           type: string
+          description: Imagen Docker para ejecutar el código
           example: gcc:13.2
         executionCommand:
           type: string
+          description: Comando de ejecución (usa ${file} como placeholder)
           example: g++ -o solution *.cpp && ./solution
         fileExtension:
           type: string
+          description: Extensión de archivo del lenguaje
           example: cpp
 
     UpdateLanguageRequest:
+      title: UpdateLanguageRequest
+      description: Datos para actualizar un lenguaje de programación
       type: object
       properties:
         name:
           type: string
+          description: Nombre del lenguaje
         editorIdentifier:
           type: string
+          description: Identificador para el editor de código
         version:
           type: string
+          description: Versión del lenguaje
         dockerImage:
           type: string
+          description: Imagen Docker para ejecutar el código
         executionCommand:
           type: string
+          description: Comando de ejecución
         fileExtension:
           type: string
+          description: Extensión de archivo del lenguaje
 
     Language:
+      title: Language
+      description: Lenguaje de programación soportado
       type: object
       properties:
         id:
           type: integer
+          description: ID único del lenguaje
         name:
           type: string
+          description: Nombre del lenguaje
         editorIdentifier:
           type: string
+          description: Identificador para el editor de código
         version:
           type: string
+          description: Versión del lenguaje
         dockerImage:
           type: string
+          description: Imagen Docker para ejecutar el código
         executionCommand:
           type: string
+          description: Comando de ejecución
         fileExtension:
           type: string
+          description: Extensión de archivo del lenguaje
 
     # ── User ──
     UserProfile:
+      title: UserProfile
+      description: Perfil completo del usuario
       type: object
       properties:
         id:
           type: string
           format: uuid
+          description: ID único del usuario
         email:
           type: string
+          description: Correo electrónico
         name:
           type: string
+          description: Nombre del usuario
         lastName:
           type: string
+          description: Apellido del usuario
         identifier:
           type: string
-          
+          description: Identificador único (matrícula)
         createdAt:
           type: string
           format: date-time
+          description: Fecha de registro
         role:
           type: object
+          description: Rol del usuario
           properties:
             id:
               type: integer
@@ -1157,72 +1291,101 @@ components:
               type: string
 
     UpdateProfileRequest:
+      title: UpdateProfileRequest
+      description: Datos para actualizar el perfil del usuario
       type: object
       properties:
         name:
           type: string
+          description: Nombre del usuario
         lastName:
           type: string
+          description: Apellido del usuario
         identifier:
           type: string
+          description: Identificador único (matrícula)
 
     ChangePasswordRequest:
+      title: ChangePasswordRequest
+      description: Solicitud para cambiar contraseña
       type: object
       required: [currentPassword, newPassword]
       properties:
         currentPassword:
           type: string
           format: password
+          description: Contraseña actual
         newPassword:
           type: string
           format: password
           minLength: 8
+          description: Nueva contraseña (mínimo 8 caracteres)
 
     # ── Subject ──
     CreateSubjectRequest:
+      title: CreateSubjectRequest
+      description: Datos para crear una materia
       type: object
       required: [name]
       properties:
         name:
           type: string
+          description: Nombre de la materia
           example: Estructuras de Datos
 
     UpdateSubjectRequest:
+      title: UpdateSubjectRequest
+      description: Datos para actualizar una materia
       type: object
       properties:
         name:
           type: string
+          description: Nombre de la materia
 
     Subject:
+      title: Subject
+      description: Materia o curso
       type: object
       properties:
         id:
           type: integer
+          description: ID único de la materia
         userId:
           type: string
           format: uuid
+          description: ID del profesor propietario
         name:
           type: string
+          description: Nombre de la materia
         professor:
           type: object
+          description: Datos del profesor
           properties:
             name:
               type: string
+              description: Nombre del profesor
             lastName:
               type: string
+              description: Apellido del profesor
 
     PaginatedSubjects:
+      title: PaginatedSubjects
+      description: Lista paginada de materias
       type: object
       properties:
         data:
           type: array
+          description: Arreglo de materias
           items:
             $ref: "#/components/schemas/Subject"
         totalCount:
           type: integer
+          description: Total de registros disponibles
 
     # ── Activity ──
     CreateActivityRequest:
+      title: CreateActivityRequest
+      description: Datos para crear una actividad de código
       type: object
       required: [subjectId, languageId, title]
       properties:
@@ -1235,10 +1398,11 @@ components:
         title:
           type: string
           maxLength: 200
+          description: Título de la actividad
           example: Suma de dos números
         description:
-          type: string
-          
+          type: [string, "null"]
+          description: Descripción detallada de la actividad
           example: Escribe un programa que lea dos enteros y devuelva su suma.
         starterCode:
           type: array
@@ -1252,103 +1416,136 @@ components:
         allowCopy:
           type: boolean
           default: true
+          description: Permitir copiar código
         allowPaste:
           type: boolean
           default: true
+          description: Permitir pegar código
 
     UpdateActivityRequest:
+      title: UpdateActivityRequest
+      description: Datos para actualizar una actividad
       type: object
       properties:
         title:
           type: string
           maxLength: 200
+          description: Título de la actividad
         description:
-          type: string
-          
+          type: [string, "null"]
+          description: Descripción detallada
         starterCode:
           type: array
           items:
             $ref: "#/components/schemas/CodeFile"
+          description: Archivos de código inicial
         maxAttempts:
           type: integer
+          description: Límite de envíos
         allowCopy:
           type: boolean
+          description: Permitir copiar código
         allowPaste:
           type: boolean
+          description: Permitir pegar código
 
     Activity:
+      title: Activity
+      description: Actividad de programación completa
       type: object
       properties:
         id:
           type: string
           format: uuid
+          description: ID único de la actividad
         professorId:
           type: string
           format: uuid
+          description: ID del profesor creador
         languageId:
           type: integer
+          description: ID del lenguaje de programación
         subjectId:
           type: integer
+          description: ID de la materia
         title:
           type: string
+          description: Título de la actividad
         description:
-          type: string
-          
+          type: [string, "null"]
+          description: Descripción detallada
         starterCode:
-          type: array
-          
+          type: [array, "null"]
+          description: Archivos de código inicial
           items:
             $ref: "#/components/schemas/CodeFile"
         maxAttempts:
           type: integer
+          description: Límite de envíos (0 = ilimitado)
         allowCopy:
           type: boolean
+          description: Permitir copiar código
         allowPaste:
           type: boolean
+          description: Permitir pegar código
         createdAt:
           type: string
           format: date-time
+          description: Fecha de creación
 
     ActivitySummary:
+      title: ActivitySummary
+      description: Resumen de actividad para listados
       type: object
       properties:
         id:
           type: string
           format: uuid
+          description: ID único de la actividad
         professorId:
           type: string
           format: uuid
+          description: ID del profesor creador
         languageId:
           type: integer
+          description: ID del lenguaje de programación
         subjectId:
           type: integer
+          description: ID de la materia
         title:
           type: string
+          description: Título de la actividad
         description:
-          type: string
-          
+          type: [string, "null"]
+          description: Descripción resumida
         createdAt:
           type: string
           format: date-time
+          description: Fecha de creación
 
     PaginatedActivitySummaries:
+      title: PaginatedActivitySummaries
+      description: Lista paginada de resúmenes de actividades
       type: object
       properties:
         data:
           type: array
+          description: Arreglo de resúmenes de actividades
           items:
             $ref: "#/components/schemas/ActivitySummary"
         totalCount:
           type: integer
+          description: Total de registros disponibles
 
     # ── Test Case ──
     CreateTestCaseRequest:
+      title: CreateTestCaseRequest
+      description: Datos para crear un caso de prueba
       type: object
       required: [expectedOutput]
       properties:
         input:
-          type: string
-          
+          type: [string, "null"]
           description: Entrada codificada en Base64 (opcional)
         expectedOutput:
           type: string
@@ -1359,83 +1556,108 @@ components:
           description: Si es true, el estudiante no ve input ni output esperado
 
     UpdateTestCaseRequest:
+      title: UpdateTestCaseRequest
+      description: Datos para actualizar un caso de prueba
       type: object
       properties:
         input:
-          type: string
-          
+          type: [string, "null"]
+          description: Entrada codificada en Base64
         expectedOutput:
           type: string
+          description: Salida esperada codificada en Base64
         isHidden:
           type: boolean
+          description: Visibilidad del caso de prueba
 
     TestCase:
+      title: TestCase
+      description: Caso de prueba para evaluar soluciones
       type: object
       properties:
         id:
           type: integer
+          description: ID único del caso de prueba
         activityId:
           type: string
           format: uuid
+          description: ID de la actividad asociada
         input:
-          type: string
-          
+          type: [string, "null"]
+          description: Entrada codificada en Base64
         expectedOutput:
           type: string
+          description: Salida esperada codificada en Base64
         isHidden:
           type: boolean
+          description: Si es true, el estudiante no ve este caso
 
     # ── Student Workspace ──
     StudentWorkspace:
+      title: StudentWorkspace
+      description: Workspace del estudiante con datos públicos de la actividad
       type: object
       properties:
         activityId:
           type: string
           format: uuid
+          description: ID de la actividad
         title:
           type: string
+          description: Título de la actividad
         description:
-          type: string
-          
+          type: [string, "null"]
+          description: Descripción de la actividad
         language:
           type: object
+          description: Lenguaje de programación
           properties:
             id:
               type: integer
+              description: ID del lenguaje
             name:
               type: string
+              description: Nombre del lenguaje
             fileExtension:
               type: string
+              description: Extensión de archivo
         starterCode:
-          type: array
-          
+          type: [array, "null"]
+          description: Archivos de código inicial
           items:
             $ref: "#/components/schemas/CodeFile"
         allowCopy:
           type: boolean
+          description: Permitir copiar código
         allowPaste:
           type: boolean
+          description: Permitir pegar código
         maxAttempts:
           type: integer
+          description: Límite de envíos (0 = ilimitado)
         testCases:
           type: array
+          description: Casos de prueba públicos
           items:
             $ref: "#/components/schemas/PublicTestCase"
 
     PublicTestCase:
+      title: PublicTestCase
+      description: Caso de prueba visible para el estudiante
       type: object
       properties:
         id:
           type: integer
+          description: ID del caso de prueba
         isHidden:
           type: boolean
+          description: Si es true, no muestra input ni output
         input:
-          type: string
-          
-          description: Solo presente si isHidden es false
+          type: [string, "null"]
+          description: Entrada (solo si isHidden es false)
         expectedOutput:
           type: string
-          description: Solo presente si isHidden es false
+          description: Salida esperada (solo si isHidden es false)
 
   responses:
     BadRequest:
@@ -1446,6 +1668,12 @@ components:
             $ref: "#/components/schemas/Error"
     Unauthorized:
       description: Token inválido, expirado o ausente
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Rol sin permisos para esta acción
       content:
         application/json:
           schema:
