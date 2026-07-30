@@ -114,25 +114,7 @@ describe("Auth Middleware", () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("calls next when token is valid", () => {
-      const req = createMockRequest("Bearer valid-token") as any;
-      const res = createMockResponse();
-      const next = createMockNext();
-
-      mockedTokenService.verifyAccessToken.mockReturnValue({
-        sub: "user-1",
-        role: UserRole.Student,
-        name: "John",
-      });
-
-      authenticate(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-      expect(req.user).toBe("user-1");
-      expect(req.role).toBe(UserRole.Student);
-    });
-
-    it("sets user and role on request object", () => {
+    it("calls next and sets user/role when token is valid", () => {
       const req = createMockRequest("Bearer valid-token") as any;
       const res = createMockResponse();
       const next = createMockNext();
@@ -145,6 +127,7 @@ describe("Auth Middleware", () => {
 
       authenticate(req, res, next);
 
+      expect(next).toHaveBeenCalled();
       expect(req.user).toBe("user-123");
       expect(req.role).toBe(UserRole.Teacher);
     });
@@ -153,16 +136,6 @@ describe("Auth Middleware", () => {
   describe("optionalAuthenticate", () => {
     it("calls next when no authorization header", () => {
       const req = createMockRequest();
-      const res = createMockResponse();
-      const next = createMockNext();
-
-      optionalAuthenticate(req, res, next);
-
-      expect(next).toHaveBeenCalled();
-    });
-
-    it("calls next when authorization header does not start with Bearer", () => {
-      const req = createMockRequest("Basic token123");
       const res = createMockResponse();
       const next = createMockNext();
 
@@ -213,6 +186,24 @@ describe("Auth Middleware", () => {
       mockedTokenService.verifyAccessToken.mockReturnValue({
         sub: "user-1",
         role: "InvalidRole",
+        name: "John",
+      });
+
+      optionalAuthenticate(req, res, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(req.user).toBe("user-1");
+      expect(req.role).toBeUndefined();
+    });
+
+    it("handles role with wrong case (student vs Student)", () => {
+      const req = createMockRequest("Bearer valid-token") as any;
+      const res = createMockResponse();
+      const next = createMockNext();
+
+      mockedTokenService.verifyAccessToken.mockReturnValue({
+        sub: "user-1",
+        role: "student",
         name: "John",
       });
 

@@ -173,4 +173,39 @@ describe("RBAC Middleware", () => {
 
     expect(next).toHaveBeenCalled();
   });
+
+  it("returns 403 when allowedRoles is empty array", () => {
+    const req = createMockRequest("Bearer valid-token");
+    const res = createMockResponse();
+    const next = createMockNext();
+
+    mockedTokenService.verifyAccessToken.mockReturnValue({
+      sub: "user-1",
+      role: UserRole.Student,
+      name: "John",
+    });
+
+    const middleware = rbac([]);
+    middleware(req, res, next);
+
+    expect(res.statusCode).toBe(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("allows God even when allowedRoles is empty", () => {
+    const req = createMockRequest("Bearer valid-token");
+    const res = createMockResponse();
+    const next = createMockNext();
+
+    mockedTokenService.verifyAccessToken.mockReturnValue({
+      sub: "user-1",
+      role: UserRole.God,
+      name: "Admin",
+    });
+
+    const middleware = rbac([]);
+    middleware(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+  });
 });
