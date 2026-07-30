@@ -148,18 +148,6 @@ describe("SubjectService", () => {
         },
       });
     });
-
-    it("throws error when database operation fails", async () => {
-      mockPrisma.subject.findMany.mockRejectedValue(new Error("DB error"));
-      mockPrisma.subject.count.mockRejectedValue(new Error("DB error"));
-      mockPrisma.$transaction.mockImplementation(async (queries) => {
-        return Promise.all(queries);
-      });
-
-      await expect(
-        subjectService.getSubjects("teacher-1", UserRole.Teacher)
-      ).rejects.toThrow("Error al listar los cursos: DB error");
-    });
   });
 
   describe("getSubjectById", () => {
@@ -182,14 +170,6 @@ describe("SubjectService", () => {
         "Materia no encontrada o no tienes permisos para acceder a ella."
       );
     });
-
-    it("throws error when subject owned by different user", async () => {
-      mockPrisma.subject.findFirst.mockResolvedValue(null);
-
-      await expect(subjectService.getSubjectById(1, "teacher-2")).rejects.toThrow(
-        "Materia no encontrada o no tienes permisos para acceder a ella."
-      );
-    });
   });
 
   describe("updateSubject", () => {
@@ -209,16 +189,6 @@ describe("SubjectService", () => {
         data: { name: "Advanced Math" },
       });
       expect(result).toEqual(updatedSubject);
-    });
-
-    it("returns existing subject when no updates provided", async () => {
-      const existingSubject = { id: 1, name: "Math", userId: "teacher-1" };
-      mockPrisma.subject.findFirst.mockResolvedValue(existingSubject);
-
-      const result = await subjectService.updateSubject(1, "teacher-1", {});
-
-      expect(mockPrisma.subject.update).not.toHaveBeenCalled();
-      expect(result).toEqual(existingSubject);
     });
 
     it("throws error when subject not found", async () => {

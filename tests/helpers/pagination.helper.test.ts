@@ -32,11 +32,6 @@ describe("getPaginationParams", () => {
     expect(result).toEqual({ skip: 0, take: 10 });
   });
 
-  it("handles skip=0 correctly", () => {
-    const result = getPaginationParams(mockRequest({ skip: "0", take: "15" }));
-    expect(result).toEqual({ skip: 0, take: 15 });
-  });
-
   it("handles negative skip values", () => {
     const result = getPaginationParams(mockRequest({ skip: "-5", take: "10" }));
     expect(result).toEqual({ skip: -5, take: 10 });

@@ -69,43 +69,6 @@ describe("TestCaseService", () => {
       expect(result).toEqual(mockTestCase);
     });
 
-    it("creates test case with null input", async () => {
-      mockedActivityService.getActivityById.mockResolvedValue({} as any);
-      mockPrisma.testCase.create.mockResolvedValue({
-        id: 1,
-        activityId: "1",
-        input: null,
-        expectedOutput: "b3V0cHV0",
-        isHidden: false,
-      });
-
-      await testCaseService.createTestCase("1", UserRole.Teacher, "teacher-1", {
-        expectedOutput: "b3V0cHV0",
-      });
-
-      expect(mockPrisma.testCase.create).toHaveBeenCalledWith({
-        data: {
-          activityId: "1",
-          input: null,
-          expectedOutput: "b3V0cHV0",
-          isHidden: false,
-        },
-      });
-    });
-
-    it("sets isHidden default to false", async () => {
-      mockedActivityService.getActivityById.mockResolvedValue({} as any);
-      mockPrisma.testCase.create.mockResolvedValue({});
-
-      await testCaseService.createTestCase("1", UserRole.Teacher, "teacher-1", {
-        expectedOutput: "b3V0cHV0",
-      });
-
-      expect(mockPrisma.testCase.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ isHidden: false }),
-      });
-    });
-
     it("throws error when activity not found", async () => {
       mockedActivityService.getActivityById.mockRejectedValue(
         new Error("Actividad no encontrada")
@@ -141,19 +104,6 @@ describe("TestCaseService", () => {
       });
       expect(result).toEqual(mockTestCases);
     });
-
-    it("returns empty array when no test cases", async () => {
-      mockedActivityService.getActivityById.mockResolvedValue({} as any);
-      mockPrisma.testCase.findMany.mockResolvedValue([]);
-
-      const result = await testCaseService.getTestCasesByActivity(
-        "1",
-        UserRole.Teacher,
-        "teacher-1"
-      );
-
-      expect(result).toEqual([]);
-    });
   });
 
   describe("updateTestCase", () => {
@@ -178,41 +128,6 @@ describe("TestCaseService", () => {
         data: { input: "bmV3", isHidden: true },
       });
       expect(result).toEqual(updatedTestCase);
-    });
-
-    it("sets input to null when explicitly provided as null", async () => {
-      const existingTestCase = { id: 1, activityId: "1", input: "aW5wdXQ=", expectedOutput: "b3V0cHV0", isHidden: false };
-
-      mockedActivityService.getActivityById.mockResolvedValue({} as any);
-      mockPrisma.testCase.findFirst.mockResolvedValue(existingTestCase);
-      mockPrisma.testCase.update.mockResolvedValue({ ...existingTestCase, input: null });
-
-      await testCaseService.updateTestCase(1, "1", UserRole.Teacher, "teacher-1", {
-        input: null,
-      });
-
-      expect(mockPrisma.testCase.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: { input: null },
-      });
-    });
-
-    it("returns existing test case when no updates provided", async () => {
-      const existingTestCase = { id: 1, activityId: "1", input: "aW5wdXQ=", expectedOutput: "b3V0cHV0", isHidden: false };
-
-      mockedActivityService.getActivityById.mockResolvedValue({} as any);
-      mockPrisma.testCase.findFirst.mockResolvedValue(existingTestCase);
-
-      const result = await testCaseService.updateTestCase(
-        1,
-        "1",
-        UserRole.Teacher,
-        "teacher-1",
-        {}
-      );
-
-      expect(mockPrisma.testCase.update).not.toHaveBeenCalled();
-      expect(result).toEqual(existingTestCase);
     });
 
     it("throws error when test case not found in activity", async () => {

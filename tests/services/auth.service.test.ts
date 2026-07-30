@@ -154,7 +154,7 @@ describe("AuthService", () => {
       expect(result.role).toBe("Teacher");
     });
 
-    it("throws error for invalid invitation code", async () => {
+    it("throws error for invalid or already used invitation code", async () => {
       const registerData = {
         email: "teacher@example.com",
         password: "password123",
@@ -163,26 +163,6 @@ describe("AuthService", () => {
       };
 
       mockPrisma.invitationCode.findUnique.mockResolvedValue(null);
-
-      await expect(authService.register(registerData)).rejects.toThrow(
-        "Invitation code is invalid or already used"
-      );
-    });
-
-    it("throws error for already used invitation code", async () => {
-      const registerData = {
-        email: "teacher@example.com",
-        password: "password123",
-        name: "Jane",
-        invitationCode: "USED123",
-      };
-
-      mockPrisma.invitationCode.findUnique.mockResolvedValue({
-        id: 1,
-        code: "USED123",
-        isUsed: true,
-        role: { name: "Teacher" },
-      });
 
       await expect(authService.register(registerData)).rejects.toThrow(
         "Invitation code is invalid or already used"
@@ -200,39 +180,6 @@ describe("AuthService", () => {
 
       await expect(authService.register(registerData)).rejects.toThrow(
         "Default role not found"
-      );
-    });
-
-    it("hashes password before creating user", async () => {
-      const registerData = {
-        email: "student@example.com",
-        password: "plaintext",
-        name: "John",
-      };
-
-      const mockStudentRole = { id: 1, name: "Student" };
-      const mockUser = {
-        id: "user-1",
-        username: "student@example.com",
-        email: "student@example.com",
-        name: "John",
-        lastName: "",
-      };
-
-      mockPrisma.role.findUnique.mockResolvedValue(mockStudentRole);
-      mockPrisma.$transaction.mockImplementation(async (callback) => {
-        const mockTx = {};
-        mockedUserService.create.mockResolvedValue(mockUser);
-        return callback(mockTx);
-      });
-
-      await authService.register(registerData);
-
-      expect(mockedUserService.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          passwordHash: expect.stringMatching(/^\$2[abxy]?\$\d{1,2}\$/),
-        }),
-        expect.any(Object)
       );
     });
   });

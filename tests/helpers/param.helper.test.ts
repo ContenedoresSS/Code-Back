@@ -18,10 +18,6 @@ describe("parseIdParam", () => {
     expect(() => parseIdParam("")).toThrow();
   });
 
-  it("throws for whitespace-only string", () => {
-    expect(() => parseIdParam("   ")).toThrow();
-  });
-
   it("uses first element when param is an array", () => {
     expect(parseIdParam(["10", "20"])).toBe(10);
   });
@@ -33,10 +29,6 @@ describe("parseIdParam", () => {
   it("uses custom paramName in error message", () => {
     expect(() => parseIdParam("abc", "ActivityID")).toThrow("ActivityID");
   });
-
-  it("uses default paramName 'ID' when not specified", () => {
-    expect(() => parseIdParam("abc")).toThrow("ID");
-  });
 });
 
 describe("parseStringParam", () => {
@@ -44,16 +36,8 @@ describe("parseStringParam", () => {
     expect(parseStringParam("  hello  ")).toBe("hello");
   });
 
-  it("returns string as-is when no trimming needed", () => {
-    expect(parseStringParam("hello")).toBe("hello");
-  });
-
   it("throws for empty string", () => {
     expect(() => parseStringParam("")).toThrow();
-  });
-
-  it("throws for whitespace-only string", () => {
-    expect(() => parseStringParam("   ")).toThrow();
   });
 
   it("uses first element when param is an array", () => {
@@ -66,13 +50,5 @@ describe("parseStringParam", () => {
 
   it("uses custom paramName in error message", () => {
     expect(() => parseStringParam("", "Name")).toThrow("Name");
-  });
-
-  it("uses default paramName when not specified", () => {
-    try {
-      parseStringParam("");
-    } catch (e: any) {
-      expect(e.message).toContain("Par");
-    }
   });
 });

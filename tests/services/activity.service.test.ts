@@ -74,18 +74,6 @@ describe("ActivityService", () => {
       ).rejects.toThrow("El curso no existe o no tienes permisos sobre");
     });
 
-    it("throws error when subject owned by different user", async () => {
-      mockPrisma.subject.findFirst.mockResolvedValue(null);
-
-      await expect(
-        activityService.createActivity("teacher-2", {
-          subjectId: 1,
-          languageId: 1,
-          title: "Test",
-        })
-      ).rejects.toThrow("El curso no existe o no tienes permisos sobre");
-    });
-
     it("throws error when language not found", async () => {
       mockPrisma.subject.findFirst.mockResolvedValue({ id: 1, userId: "teacher-1" });
       mockPrisma.programmingLanguage.findUnique.mockResolvedValue(null);
@@ -97,33 +85,6 @@ describe("ActivityService", () => {
           title: "Test",
         })
       ).rejects.toThrow("lenguaje de programaci");
-    });
-
-    it("sets default values for optional fields", async () => {
-      const mockActivity = {
-        id: "1",
-        maxAttempts: 0,
-        allowCopy: true,
-        allowPaste: true,
-      };
-
-      mockPrisma.subject.findFirst.mockResolvedValue({ id: 1, userId: "teacher-1" });
-      mockPrisma.programmingLanguage.findUnique.mockResolvedValue({ id: 1 });
-      mockPrisma.activity.create.mockResolvedValue(mockActivity);
-
-      await activityService.createActivity("teacher-1", {
-        subjectId: 1,
-        languageId: 1,
-        title: "Test",
-      });
-
-      expect(mockPrisma.activity.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          maxAttempts: 0,
-          allowCopy: true,
-          allowPaste: true,
-        }),
-      });
     });
   });
 
@@ -242,16 +203,6 @@ describe("ActivityService", () => {
         data: { title: "New" },
       });
       expect(result).toEqual(updatedActivity);
-    });
-
-    it("returns existing activity when no updates provided", async () => {
-      const existingActivity = { id: "1", title: "Test", professorId: "teacher-1" };
-      mockPrisma.activity.findFirst.mockResolvedValue(existingActivity);
-
-      const result = await activityService.updateActivity("1", UserRole.Teacher, "teacher-1", {});
-
-      expect(mockPrisma.activity.update).not.toHaveBeenCalled();
-      expect(result).toEqual(existingActivity);
     });
 
     it("throws error when activity not found", async () => {

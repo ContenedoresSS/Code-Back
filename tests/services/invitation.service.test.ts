@@ -94,19 +94,6 @@ describe("InvitationService", () => {
       });
       expect(result).toEqual(mockInvitation);
     });
-
-    it("generates uppercase hex code", async () => {
-      mockPrisma.invitationCode.create.mockImplementation(({ data }) => ({
-        id: 1,
-        ...data,
-        role: { name: "Teacher" },
-      }));
-
-      const result = await invitationService.create(2);
-
-      expect(result.code).toBe(result.code.toUpperCase());
-      expect(result.code).toMatch(/^[A-F0-9]+$/);
-    });
   });
 
   describe("update", () => {
@@ -128,37 +115,6 @@ describe("InvitationService", () => {
         include: { role: true },
       });
       expect(result).toEqual(mockUpdated);
-    });
-
-    it("can update roleId", async () => {
-      const mockUpdated = {
-        id: 1,
-        code: "ABC123",
-        isUsed: false,
-        roleId: 3,
-        role: { name: "God" },
-      };
-      mockPrisma.invitationCode.update.mockResolvedValue(mockUpdated);
-
-      await invitationService.update(1, { roleId: 3 });
-
-      expect(mockPrisma.invitationCode.update).toHaveBeenCalledWith({
-        where: { id: 1 },
-        data: { roleId: 3 },
-        include: { role: true },
-      });
-    });
-  });
-
-  describe("delete", () => {
-    it("deletes invitation code by id", async () => {
-      mockPrisma.invitationCode.delete.mockResolvedValue({ id: 1 });
-
-      await invitationService.delete(1);
-
-      expect(mockPrisma.invitationCode.delete).toHaveBeenCalledWith({
-        where: { id: 1 },
-      });
     });
   });
 

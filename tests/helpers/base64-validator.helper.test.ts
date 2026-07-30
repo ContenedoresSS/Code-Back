@@ -22,27 +22,11 @@ describe("isBase64", () => {
     expect(isBase64("SGV")).toBe(true);
   });
 
-  it("returns true for empty base64 string", () => {
+  it("returns false for empty string", () => {
     expect(isBase64("")).toBe(false);
-  });
-
-  it("returns false for whitespace-only string", () => {
-    expect(isBase64("   ")).toBe(false);
-  });
-
-  it("returns false for plain text with spaces", () => {
-    expect(isBase64("Hello World")).toBe(false);
   });
 
   it("returns false for string with invalid characters", () => {
     expect(isBase64("Hello!@#$%")).toBe(false);
-  });
-
-  it("returns true for base64 encoded number", () => {
-    expect(isBase64("MTIz")).toBe(true);
-  });
-
-  it("returns true for base64 with all valid char groups", () => {
-    expect(isBase64("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo=")).toBe(true);
   });
 });

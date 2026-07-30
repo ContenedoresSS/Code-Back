@@ -14,50 +14,24 @@ describe("TokenService", () => {
   };
 
   describe("generateTokenPair", () => {
-    it("generates valid access and refresh tokens", async () => {
-      const tokenPair = await tokenService.generateTokenPair(testPayload);
-
-      expect(tokenPair).toHaveProperty("accessToken");
-      expect(tokenPair).toHaveProperty("refreshToken");
-      expect(typeof tokenPair.accessToken).toBe("string");
-      expect(typeof tokenPair.refreshToken).toBe("string");
-    });
-
-    it("access token contains correct payload", async () => {
+    it("access token contains correct payload and expires in 4 hours", async () => {
       const tokenPair = await tokenService.generateTokenPair(testPayload);
       const decoded = jwt.decode(tokenPair.accessToken) as any;
 
       expect(decoded.sub).toBe("user-123");
       expect(decoded.role).toBe("Student");
       expect(decoded.name).toBe("John");
+      expect(decoded.exp - decoded.iat).toBe(4 * 60 * 60);
     });
 
-    it("access token expires in 4 hours", async () => {
-      const tokenPair = await tokenService.generateTokenPair(testPayload);
-      const decoded = jwt.decode(tokenPair.accessToken) as any;
-
-      const now = Math.floor(Date.now() / 1000);
-      const expiresIn = decoded.exp - decoded.iat;
-
-      expect(expiresIn).toBe(4 * 60 * 60);
-    });
-
-    it("refresh token contains only sub", async () => {
+    it("refresh token contains only sub and expires in 7 days", async () => {
       const tokenPair = await tokenService.generateTokenPair(testPayload);
       const decoded = jwt.decode(tokenPair.refreshToken) as any;
 
       expect(decoded.sub).toBe("user-123");
       expect(decoded.role).toBeUndefined();
       expect(decoded.name).toBeUndefined();
-    });
-
-    it("refresh token expires in 7 days", async () => {
-      const tokenPair = await tokenService.generateTokenPair(testPayload);
-      const decoded = jwt.decode(tokenPair.refreshToken) as any;
-
-      const expiresIn = decoded.exp - decoded.iat;
-
-      expect(expiresIn).toBe(7 * 24 * 60 * 60);
+      expect(decoded.exp - decoded.iat).toBe(7 * 24 * 60 * 60);
     });
   });
 
