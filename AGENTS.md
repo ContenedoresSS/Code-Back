@@ -239,7 +239,16 @@ NODE_ENV=development
 
 ## 11. CI/CD
 
-Dos workflows en GitHub Actions:
+Tres workflows en GitHub Actions:
+
+### `ci_pr.yml`
+- **Disparador**: pull request a `main`
+- **Acción**: valida el PR con 4 jobs segmentados
+  - `lint-format` — verifica formato con Prettier
+  - `typecheck` — compila TypeScript
+  - `tests` — ejecuta tests (depende de typecheck)
+  - `docker-build` — valida que la imagen Docker compila (solo `linux/amd64`, sin push)
+- **Propósito**: asegurar calidad antes del merge
 
 ### `cicd_docker.yml`
 - **Disparador**: tag `v*` (ej. `v1.2.3`)
@@ -248,6 +257,24 @@ Dos workflows en GitHub Actions:
 ### `cd_deploy_on_vps.yml`
 - **Disparador**: se ejecuta automáticamente al completar el workflow de CI
 - **Acción**: SSH al VPS → `cd /opt/code-panel-back` → `docker compose pull && up -d --remove-orphans` → `docker image prune -af`
+
+### Flujo de deploy completo
+
+```
+PR a main → CI valida (ci_pr.yml) → Review + Merge
+                                          ↓
+                                    main actualizado
+                                          ↓
+                              Líder decide deployar
+                                          ↓
+                              Crear tag v0.0.17
+                                          ↓
+                              cicd_docker.yml (build + push)
+                                          ↓
+                              cd_deploy_on_vps.yml (deploy)
+```
+
+**Importante**: El deploy NO es automático al mergear a `main`. El líder del proyecto decide cuándo deployar creando un tag versionado.
 
 ### Docker Compose local
 
@@ -285,3 +312,88 @@ El contenedor necesita acceso al socket de Docker del host para crear contenedor
 - Este repositorio (`Code-Back`): backend — API REST
 - [**Frontend**](https://github.com/ContenedoresSS/Code-Panel-Frontend): editor de código que se embebe en Moodle via iframe — consume esta API
 - **URL pública**: `https://codepanel.orchfr.duckdns.org` (dominio dinámico para el frontend)
+
+---
+
+## 14. Flujo de trabajo con Git
+
+### Estrategia de ramas
+
+- **`main`** — rama de producción, siempre desplegable
+- **Feature branches** — ramas temporales para desarrollo (`feat/*`, `fix/*`, `refactor/*`, etc.)
+
+### Naming de branches (Conventional Commits)
+
+```
+feat/nombre-feature       # Nueva funcionalidad
+fix/bug-especifico        # Corrección de error
+refactor/modulo-auth      # Refactorización
+docs/actualizar-api       # Documentación
+test/agregar-tests        # Tests
+chore/actualizar-deps     # Mantenimiento
+```
+
+### Proceso paso a paso
+
+1. **Crear rama** desde `main` actualizado:
+   ```bash
+   git checkout main
+   git pull origin main
+   git checkout -b feat/nueva-feature
+   ```
+
+2. **Trabajar** siguiendo las directivas del proyecto (código, tests, formato)
+
+3. **Commits** siguiendo Conventional Commits:
+   ```bash
+   git commit -m "feat: agregar validación de email"
+   git commit -m "fix: corregir rate limiter"
+   ```
+
+4. **Push** a la rama:
+   ```bash
+   git push origin feat/nueva-feature
+   ```
+
+5. **Abrir PR** a `main`:
+   - El CI se ejecuta automáticamente (ci_pr.yml)
+   - Debe pasar: lint, typecheck, tests, docker-build
+
+6. **Review y aprobación**:
+   - Se requiere al menos 1 aprobación
+   - Atender comentarios del review
+
+7. **Merge** via **rebase** (historial limpio):
+   ```bash
+   git checkout main
+   git pull origin main
+   git rebase feat/nueva-feature
+   git push origin main
+   ```
+
+8. **Deploy** (cuando el líder decida):
+   ```bash
+   git tag v0.0.17
+   git push origin v0.0.17
+   ```
+
+### Reglas de merge
+
+- ✅ Solo **rebase** (no merge commits)
+- ✅ Requiere **aprobación** de al menos 1 persona
+- ✅ CI debe **pasar completamente**
+- ✅ Rama debe estar **actualizada** con `main`
+
+### Excepciones
+
+- Cambios de **documentación urgentes** pueden ir directo a `main`
+- Hotfixes críticos pueden saltarse el review (pero deben documentarse)
+
+### Protección de rama `main` (recomendado)
+
+Configurar en GitHub Settings → Branches → Branch protection rules:
+- ✅ Require pull request before merging
+- ✅ Require status checks to pass (ci_pr.yml)
+- ✅ Require branch to be up to date before merging
+- ✅ Do not allow force pushes
+- ✅ Do not allow merge commits (solo rebase/squash)
