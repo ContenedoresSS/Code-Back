@@ -3,7 +3,6 @@ import cors from "cors";
 import type { CorsOptions } from "cors";
 import express from "express";
 import v1Routes from "./routes/index-v1.routes.js";
-import { swaggerUiHandler, swaggerUiSetup, swaggerSpec } from "./config/swagger.js";
 
 const PORT = ENV.PORT;
 
@@ -30,11 +29,11 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use("/api/v1", v1Routes);
 
-app.get("/docs/openapi.json", (_req, res) => {
-  res.json(swaggerSpec);
-});
-
 if (ENV.NODE_ENV === "development") {
+  const { swaggerUiHandler, swaggerUiSetup, swaggerSpec } = await import("./config/swagger.js");
+  app.get("/docs/openapi.json", (_req, res) => {
+    res.json(swaggerSpec);
+  });
   app.use("/docs", swaggerUiHandler, swaggerUiSetup);
 }
 
