@@ -369,6 +369,24 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 
 ---
 
+## Pilar 12 — CI/CD y despliegue
+
+### DEBT‑28: VPS no usa compose.prod.yaml del repositorio
+
+- **Archivos**: `.github/workflows/cd_deploy_on_vps.yml`, `compose.prod.yaml`
+- **Problema**: El workflow de CD ejecuta `docker compose pull` y `docker compose up -d` sin especificar un archivo compose. El VPS probablemente tiene su propio `compose.yaml` o `docker-compose.yml` local que no está versionado. Mientras tanto, el repositorio tiene `compose.prod.yaml` como punto único de verdad para producción.
+- **Impacto**: 
+  - El compose del VPS puede desincronizarse del repositorio.
+  - Nuevos desarrolladores no saben qué compose se usa en producción.
+  - Cambios en la infraestructura requieren SSH manual al VPS en lugar de un PR.
+- **Recomendación**:
+  1. Configurar el VPS para usar `compose.prod.yaml` del repositorio (o un symlink/copia sincronizada).
+  2. Actualizar el workflow CD para usar `docker compose -f compose.prod.yaml`.
+  3. Hacer que el repositorio sea la fuente única de verdad para la configuración de despliegue.
+  4. Documentar el proceso de sincronización del compose al VPS.
+
+---
+
 ## Resumen de prioridades
 
 | Prioridad | DEBTs | Pilar | Acción sugerida |
@@ -382,5 +400,6 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 | **Media** | 16, 17 | Observabilidad | pino, health check |
 | **Media** | 19, 21 | BD + auth | Índices, rate limit en login |
 | **Media** | 24, 25, 26 | Negocio | Endpoints de enrollment y submissions |
+| **Media** | 28 | CI/CD | Configurar VPS para usar compose.prod.yaml |
 | **Baja** | 18, 22, 23 | DX | Organizar tipos, CORS en env |
 | **Seguimiento** | 27 | OpenAPI | Migrar a zod-to-openapi cuando se implemente DEBT‑08 |

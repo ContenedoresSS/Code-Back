@@ -19,6 +19,9 @@ benchmarks/graphs
 dist/
 .env
 
+# Local workspace (plans, notes, scratch work)
+.local/
+
 # ignore additional files using core.excludesFile
 # https://git-scm.com/docs/gitignore
 /src/generated/prisma

@@ -25,4 +25,4 @@ jobs:
             cd /opt/code-panel-back
             sudo /usr/bin/docker compose pull
             sudo /usr/bin/docker compose up -d --remove-orphans
-            sudo /usr/bin/docker image prune -af
+            sudo /usr/bin/docker image prune -f

@@ -176,6 +176,7 @@ Guía completa en [`DEPLOY.md`](./DEPLOY.md).
 | [`AGENTS.md`](./AGENTS.md) | Contexto de negocio, arquitectura detallada, convenciones |
 | [`DEBT.md`](./DEBT.md) | Análisis de deuda técnica con 26 hallazgos priorizados |
 | [`DEPLOY.md`](./DEPLOY.md) | Guía de despliegue agnóstica a plataforma |
+| [`CHANGELOG.md`](./CHANGELOG.md) | Historial de cambios por versión |
 
 ---
 

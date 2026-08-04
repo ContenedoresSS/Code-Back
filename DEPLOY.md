@@ -4,6 +4,24 @@ El backend es **agnóstico a la plataforma de despliegue**. Solo requiere Docker
 
 ---
 
+## Tabla de contenidos
+
+1. [Requisitos mínimos](#1-requisitos-mínimos)
+2. [Estructura de archivos esperada en el servidor](#2-estructura-de-archivos-esperada-en-el-servidor)
+3. [compose.prod.yaml — La pieza central](#3-composeprodyaml--la-pieza-central)
+4. [Variables de entorno de producción (.env)](#4-variables-de-entorno-de-producción-env)
+5. [Primer despliegue (paso a paso)](#5-primer-despliegue-paso-a-paso)
+6. [Reverse proxy y SSL (opcional)](#6-reverse-proxy-y-ssl-opcional)
+7. [Conectar el CI/CD (GitHub Actions → VPS)](#7-conectar-el-cicd-github-actions--vps)
+8. [Proceso de versionamiento y CHANGELOG](#8-proceso-de-versionamiento-y-changelog)
+9. [Actualización manual (sin CI/CD)](#9-actualización-manual-sin-cicd)
+10. [Mantenimiento y troubleshooting](#10-mantenimiento-y-troubleshooting)
+11. [Migración a otro servidor](#11-migración-a-otro-servidor)
+12. [Seguridad básica del host](#12-seguridad-básica-del-host)
+13. [Resumen: checklist de primer despliegue](#13-resumen-checklist-de-primer-despliegue)
+
+---
+
 ## 1. Requisitos mínimos
 
 | Requisito                | Detalle                                                              |
@@ -30,75 +48,72 @@ El backend es **agnóstico a la plataforma de despliegue**. Solo requiere Docker
 
 ## 3. `compose.prod.yaml` — La pieza central
 
-Este archivo **debe incluirse en el repositorio** (hoy no existe). Define todos los servicios necesarios para producción:
+Este archivo **ya está incluido en el repositorio** (`compose.prod.yaml`). Define todos los servicios necesarios para producción:
 
 ```yaml
 services:
-  db:
+  db_postgres:
     image: postgres:16-alpine
-    container_name: code_panel_db
+    container_name: postgres_db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - app_network
 
-  backend:
-    image: ghcr.io/carloosaz/code-back:latest
-    container_name: containers_back
+  code-panel-back:
+    image: ghcr.io/contenedoresss/code-panel-backend:latest
+    container_name: code-panel-back
     restart: unless-stopped
+    env_file: .env
     ports:
-      - "${PORT:-3000}:${PORT:-3000}"
-    env_file:
-      - .env
+      - "${PORT:-5555}:3000"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock # Unico requisito del host
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      db:
+      db_postgres:
         condition: service_healthy
-    networks:
-      - app_network
 
 volumes:
-  pgdata:
+  postgres_data:
     driver: local
-
-networks:
-  app_network:
-    driver: bridge
 ```
 
 Este compose:
 
-- Incluye PostgreSQL como servicio interno.
-- Expone solo el backend (la BD no es accesible desde fuera del compose).
-- El healthcheck del backend depende del healthcheck de PostgreSQL.
-- Usa una red interna (`app_network`) para que los servicios se comuniquen.
+- Incluye PostgreSQL como servicio interno con healthcheck.
+- El backend depende de que la BD esté saludable antes de iniciar.
+- Usa variables de entorno del archivo `.env` para todos los secretos.
 - El único acople al host es el bind mount del socket de Docker (`/var/run/docker.sock`).
+- Expone el backend en el puerto configurado (default: 5555 → 3000 interno).
+- Expone PostgreSQL en el puerto configurado (default: 5432).
 
 ---
 
 ## 4. Variables de entorno de producción (`.env`)
 
+El archivo `.env` **no debe incluirse en el repositorio**. Crea este archivo en el servidor:
+
 ```bash
-# ── Puerto ──
-PORT=3000
+# ── Puerto del backend ──
+PORT=5555
 NODE_ENV=production
 
 # ── Base de datos (PostgreSQL dentro del compose) ──
-POSTGRES_USER=code_panel
+POSTGRES_USER=<usuario-postgres>
 POSTGRES_PASSWORD=<contraseña-segura>
-POSTGRES_DB=code_panel
-DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+POSTGRES_DB=<nombre-base-de-datos>
+POSTGRES_PORT=5432
+DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db_postgres:5432/${POSTGRES_DB}"
 
 # ── JWT ──
 JWT_SECRET=<mínimo-20-caracteres>
@@ -112,7 +127,9 @@ openssl rand -base64 64   # Para JWT_REFRESH_SECRET
 openssl rand -base64 32   # Para POSTGRES_PASSWORD
 ```
 
-Si usas un PostgreSQL externo (no el del compose), ajusta `DATABASE_URL` al host y puerto correspondientes y quita el servicio `db` del compose.
+**Nota**: El `DATABASE_URL` usa `db_postgres` como host porque ese es el nombre del servicio en el compose. Docker Compose resuelve automáticamente este nombre a la IP del contenedor de PostgreSQL.
+
+Si usas un PostgreSQL externo (no el del compose), ajusta `DATABASE_URL` al host y puerto correspondientes y considera eliminar el servicio `db_postgres` del compose.
 
 ---
 
@@ -157,8 +174,12 @@ docker compose -f compose.prod.yaml up -d
 
 ```bash
 # Clonar el repositorio temporalmente para el build
-git clone https://github.com/carloosaz/code-back.git /tmp/code-back
+git clone https://github.com/ContenedoresSS/Code-Back.git /tmp/code-back
 cd /opt/code-panel-back
+
+# Copiar el compose.prod.yaml y Dockerfile desde el repo
+cp /tmp/code-back/compose.prod.yaml .
+cp /tmp/code-back/Dockerfile .
 
 # Construir y levantar
 docker compose -f compose.prod.yaml up -d --build
@@ -168,10 +189,10 @@ docker compose -f compose.prod.yaml up -d --build
 
 ```bash
 # Aplicar migraciones de Prisma
-docker compose -f compose.prod.yaml exec backend npx prisma migrate deploy
+docker compose -f compose.prod.yaml exec code-panel-back npx prisma migrate deploy
 
 # Ejecutar seed (crea roles, admin, profesor demo, lenguajes)
-docker compose -f compose.prod.yaml exec backend npx tsx prisma/seed.ts
+docker compose -f compose.prod.yaml exec code-panel-back npx tsx prisma/seed.ts
 ```
 
 ### 5.6 Verificar
@@ -181,7 +202,7 @@ docker compose -f compose.prod.yaml exec backend npx tsx prisma/seed.ts
 docker compose -f compose.prod.yaml ps
 
 # Logs del backend (Ctrl+C para salir)
-docker compose -f compose.prod.yaml logs -f backend
+docker compose -f compose.prod.yaml logs -f code-panel-back
 
 # Health check manual (desde el host o desde dentro de la red del compose)
 curl http://localhost:3000/tonoto
@@ -309,9 +330,21 @@ sudo cloudflared service install
 
 ## 7. Conectar el CI/CD (GitHub Actions → VPS)
 
-El workflow `cd_deploy_on_vps.yml` ya existe en el repo. Para que funcione, necesitas configurar 3 secrets en GitHub y autorizar la llave SSH en el VPS.
+El proyecto tiene dos workflows en `.github/workflows/` que trabajan juntos:
 
-### 7.1 Generar par de llaves SSH
+### 7.1 Flujo de CI/CD
+
+1. **CI** (`cicd_docker.yml`): Se dispara al crear un tag `v*`
+   - Build multiplataforma (linux/amd64, linux/arm64)
+   - Push a `ghcr.io/contenedoresss/code-panel-backend` con tags `:vX.Y.Z` y `:latest`
+
+2. **CD** (`cd_deploy_on_vps.yml`): Se dispara automáticamente cuando el CI termina exitosamente
+   - SSH al VPS usando las llaves configuradas
+   - `docker compose pull` para obtener la nueva imagen
+   - `docker compose up -d --remove-orphans` para desplegar
+   - `docker image prune -af` para limpiar imágenes viejas
+
+### 7.2 Generar par de llaves SSH
 
 ```bash
 # En tu máquina local (NO en el VPS)
@@ -322,7 +355,7 @@ Esto genera:
 - `~/.ssh/code_panel_deploy` → **llave privada** (va a GitHub Secrets)
 - `~/.ssh/code_panel_deploy.pub` → **llave pública** (va al VPS)
 
-### 7.2 Autorizar la llave pública en el VPS
+### 7.3 Autorizar la llave pública en el VPS
 
 ```bash
 # Copiar la llave pública al VPS
@@ -332,7 +365,7 @@ cat ~/.ssh/code_panel_deploy.pub | ssh usuario@vps "cat >> ~/.ssh/authorized_key
 ssh -i ~/.ssh/code_panel_deploy usuario@vps "echo OK"
 ```
 
-### 7.3 Configurar secrets en GitHub
+### 7.4 Configurar secrets en GitHub
 
 En el repositorio: **Settings → Secrets and variables → Actions → Repository secrets**:
 
@@ -342,13 +375,13 @@ En el repositorio: **Settings → Secrets and variables → Actions → Reposito
 | `VPS_USER`     | Usuario SSH con acceso al VPS              |
 | `VPS_SSH_KEY`  | Contenido completo de `~/.ssh/code_panel_deploy` (la llave privada) |
 
-### 7.4 Verificar el pipeline
+### 7.5 Verificar el pipeline
 
 Haz un push con un tag `v*`:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v0.0.15-alpha
+git push origin v0.0.15-alpha
 ```
 
 Esto dispara:
@@ -359,7 +392,106 @@ Los logs aparecen en la pestaña **Actions** del repositorio.
 
 ---
 
-## 8. Actualización manual (sin CI/CD)
+## 8. Proceso de versionamiento y CHANGELOG
+
+### 8.1 Versionamiento SemVer
+
+Este proyecto utiliza [Semantic Versioning](https://semver.org/lang/es/) (SemVer) con el formato `MAJOR.MINOR.PATCH`:
+
+- **MAJOR**: Cambios incompatibles en la API
+- **MINOR**: Nuevas funcionalidades compatibles con versiones anteriores
+- **PATCH**: Corrección de errores compatible con versiones anteriores
+
+Para versiones de desarrollo/pre-release, se usa el sufijo `-alpha`:
+```
+v0.0.14-alpha
+```
+
+### 8.2 Flujo de release
+
+1. **Desarrollar features** en ramas locales
+2. **Merge a main** cuando esté listo
+3. **Actualizar CHANGELOG.md** (ver sección 8.3)
+4. **Crear y push del tag**:
+   ```bash
+   git tag v0.0.15-alpha
+   git push origin v0.0.15-alpha
+   ```
+5. **CI/CD se ejecuta automáticamente**:
+   - CI: Build multiplataforma → push a `ghcr.io`
+   - CD: SSH al VPS → `docker compose pull && up -d`
+
+### 8.3 Mantener el CHANGELOG
+
+El archivo `CHANGELOG.md` sigue el formato [Keep a Changelog](https://keepachangelog.com/).
+
+**Antes de crear un nuevo tag**, actualiza el CHANGELOG:
+
+1. **Agregar cambios no versionados** en la sección `[Unreleased]`:
+   ```markdown
+   ## [Unreleased]
+
+   ### Added
+   - Nueva funcionalidad X
+   - Nuevo endpoint Y
+
+   ### Fixed
+   - Corrección del bug Z
+   ```
+
+2. **Al crear un nuevo tag**, mueve los cambios de `[Unreleased]` a la nueva versión:
+   ```markdown
+   ## [Unreleased]
+
+   ## [0.0.15-alpha] - 2026-08-03
+
+   ### Added
+   - Nueva funcionalidad X
+   - Nuevo endpoint Y
+
+   ### Fixed
+   - Corrección del bug Z
+   ```
+
+3. **Agregar el enlace de comparación** al final del archivo:
+   ```markdown
+   [0.0.15-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.14-alpha...v0.0.15-alpha
+   ```
+
+### 8.4 Categorías del CHANGELOG
+
+Usa estas categorías para organizar los cambios:
+
+- **Added**: Nuevas funcionalidades
+- **Changed**: Cambios en funcionalidades existentes
+- **Deprecated**: Funcionalidades que serán eliminadas
+- **Removed**: Funcionalidades eliminadas
+- **Fixed**: Corrección de errores
+- **Security**: Cambios relacionados con seguridad
+
+### 8.5 Ejemplo completo de release
+
+```bash
+# 1. Actualizar CHANGELOG.md
+# (editar manualmente agregando cambios bajo [Unreleased])
+
+# 2. Commit del CHANGELOG actualizado
+git add CHANGELOG.md
+git commit -m "docs: update CHANGELOG for v0.0.15-alpha"
+
+# 3. Crear tag
+git tag v0.0.15-alpha
+
+# 4. Push del commit y el tag
+git push origin main
+git push origin v0.0.15-alpha
+```
+
+El CI/CD se ejecutará automáticamente y desplegará la nueva versión.
+
+---
+
+## 9. Actualización manual (sin CI/CD)
 
 Si alguna vez necesitas actualizar sin pasar por GitHub Actions:
 
@@ -367,19 +499,19 @@ Si alguna vez necesitas actualizar sin pasar por GitHub Actions:
 cd /opt/code-panel-back
 
 # Opción A: usando imágenes pre‑built (recomendado)
-docker compose -f compose.prod.yaml pull backend
-docker compose -f compose.prod.yaml up -d backend
+docker compose -f compose.prod.yaml pull code-panel-back
+docker compose -f compose.prod.yaml up -d code-panel-back
 
 # Opción B: reconstruyendo localmente
-docker compose -f compose.prod.yaml up -d --build backend
+docker compose -f compose.prod.yaml up -d --build code-panel-back
 
 # Verificar que arrancó
-docker compose -f compose.prod.yaml logs --tail=50 backend
+docker compose -f compose.prod.yaml logs --tail=50 code-panel-back
 ```
 
 ---
 
-## 9. Mantenimiento y troubleshooting
+## 10. Mantenimiento y troubleshooting
 
 ### Logs
 
@@ -388,17 +520,17 @@ docker compose -f compose.prod.yaml logs --tail=50 backend
 docker compose -f compose.prod.yaml logs -f
 
 # Solo el backend
-docker compose -f compose.prod.yaml logs -f backend
+docker compose -f compose.prod.yaml logs -f code-panel-back
 
 # Últimas 100 líneas
-docker compose -f compose.prod.yaml logs --tail=100 backend
+docker compose -f compose.prod.yaml logs --tail=100 code-panel-back
 ```
 
 ### Reiniciar servicios
 
 ```bash
 # Reiniciar solo el backend (sin tirar la BD)
-docker compose -f compose.prod.yaml restart backend
+docker compose -f compose.prod.yaml restart code-panel-back
 
 # Bajar y volver a levantar todo
 docker compose -f compose.prod.yaml down
@@ -434,20 +566,20 @@ docker image prune -a
 
 ```bash
 # Backup completo
-docker compose -f compose.prod.yaml exec db pg_dump -U ${POSTGRES_USER} ${POSTGRES_DB} > backup_$(date +%Y%m%d_%H%M%S).sql
+docker compose -f compose.prod.yaml exec db_postgres pg_dump -U ${POSTGRES_USER} ${POSTGRES_DB} > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # Backup comprimido
-docker compose -f compose.prod.yaml exec db pg_dump -U ${POSTGRES_USER} ${POSTGRES_DB} | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
+docker compose -f compose.prod.yaml exec db_postgres pg_dump -U ${POSTGRES_USER} ${POSTGRES_DB} | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.gz
 ```
 
 ### Restaurar backup
 
 ```bash
 # Restaurar desde archivo .sql
-cat backup.sql | docker compose -f compose.prod.yaml exec -T db psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+cat backup.sql | docker compose -f compose.prod.yaml exec -T db_postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}
 
 # Restaurar desde archivo comprimido
-gunzip -c backup.sql.gz | docker compose -f compose.prod.yaml exec -T db psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+gunzip -c backup.sql.gz | docker compose -f compose.prod.yaml exec -T db_postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}
 ```
 
 ### Programar backups automáticos (cron)
@@ -457,7 +589,7 @@ gunzip -c backup.sql.gz | docker compose -f compose.prod.yaml exec -T db psql -U
 crontab -e
 
 # Agregar esta línea:
-0 3 * * * docker compose -f /opt/code-panel-back/compose.prod.yaml exec -T db pg_dump -U code_panel code_panel | gzip > /opt/code-panel-back/backups/backup_$(date +\%Y\%m\%d).sql.gz
+0 3 * * * docker compose -f /opt/code-panel-back/compose.prod.yaml exec -T db_postgres pg_dump -U code_panel code_panel | gzip > /opt/code-panel-back/backups/backup_$(date +\%Y\%m\%d).sql.gz
 ```
 
 ```bash
@@ -483,7 +615,7 @@ ls -la /var/run/docker.sock
 sudo usermod -aG docker $USER
 
 # Verificar desde dentro del contenedor
-docker compose -f compose.prod.yaml exec backend ls -la /var/run/docker.sock
+docker compose -f compose.prod.yaml exec code-panel-back ls -la /var/run/docker.sock
 ```
 
 ### El backend no levanta porque la BD no está lista
@@ -491,19 +623,19 @@ docker compose -f compose.prod.yaml exec backend ls -la /var/run/docker.sock
 El `depends_on` con `condition: service_healthy` resuelve esto. Si aún falla, verifica que PostgreSQL haya terminado de inicializar:
 
 ```bash
-docker compose -f compose.prod.yaml logs db
+docker compose -f compose.prod.yaml logs db_postgres
 ```
 
 ---
 
-## 10. Migración a otro servidor
+## 11. Migración a otro servidor
 
 El backend es agnóstico a la plataforma. Migrar es:
 
 ```bash
 # En el servidor viejo: backup de la BD
 cd /opt/code-panel-back
-docker compose -f compose.prod.yaml exec -T db pg_dump -U code_panel code_panel | gzip > backup.sql.gz
+docker compose -f compose.prod.yaml exec -T db_postgres pg_dump -U code_panel code_panel | gzip > backup.sql.gz
 
 # Copiar backup y archivos al nuevo servidor
 scp backup.sql.gz usuario@nuevo-vps:/opt/code-panel-back/
@@ -513,13 +645,13 @@ scp compose.prod.yaml usuario@nuevo-vps:/opt/code-panel-back/
 # En el servidor nuevo
 cd /opt/code-panel-back
 docker compose -f compose.prod.yaml up -d
-gunzip -c backup.sql.gz | docker compose -f compose.prod.yaml exec -T db psql -U code_panel -d code_panel
-docker compose -f compose.prod.yaml restart backend
+gunzip -c backup.sql.gz | docker compose -f compose.prod.yaml exec -T db_postgres psql -U code_panel -d code_panel
+docker compose -f compose.prod.yaml restart code-panel-back
 ```
 
 ---
 
-## 11. Seguridad básica del host
+## 12. Seguridad básica del host
 
 Independiente del backend, todo servidor expuesto debería:
 
@@ -543,7 +675,7 @@ sudo systemctl enable fail2ban
 
 ---
 
-## 12. Resumen: checklist de primer despliegue
+## 13. Resumen: checklist de primer despliegue
 
 - [ ] Docker y Docker Compose instalados en el host
 - [ ] `/opt/code-panel-back` creado
