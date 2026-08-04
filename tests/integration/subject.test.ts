@@ -17,8 +17,8 @@ describe("Integration: Subject Endpoints", () => {
     it("returns subjects for authenticated teacher", async () => {
       const mockSubjects = {
         data: [
-          { id: 1, name: "Mathematics", userId: "teacher-1" },
-          { id: 2, name: "Physics", userId: "teacher-1" },
+          { id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null },
+          { id: 2, name: "Physics", userId: "teacher-1", imageUrl: null },
         ],
         totalCount: 2,
       };
@@ -39,8 +39,8 @@ describe("Integration: Subject Endpoints", () => {
     it("returns all subjects for God role", async () => {
       const mockSubjects = {
         data: [
-          { id: 1, name: "Mathematics", userId: "teacher-1" },
-          { id: 2, name: "Physics", userId: "teacher-2" },
+          { id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null },
+          { id: 2, name: "Physics", userId: "teacher-2", imageUrl: null },
         ],
         totalCount: 2,
       };
@@ -64,7 +64,7 @@ describe("Integration: Subject Endpoints", () => {
 
     it("supports pagination with skip and take", async () => {
       const mockSubjects = {
-        data: [{ id: 3, name: "Chemistry", userId: "teacher-1" }],
+        data: [{ id: 3, name: "Chemistry", userId: "teacher-1", imageUrl: null }],
         totalCount: 10,
       };
 
@@ -81,7 +81,7 @@ describe("Integration: Subject Endpoints", () => {
 
     it("supports search by name", async () => {
       const mockSubjects = {
-        data: [{ id: 1, name: "Mathematics", userId: "teacher-1" }],
+        data: [{ id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null }],
         totalCount: 1,
       };
 
@@ -99,7 +99,7 @@ describe("Integration: Subject Endpoints", () => {
 
   describe("GET /api/v1/subject/:id", () => {
     it("returns subject when found and owned by user", async () => {
-      const mockSubject = { id: 1, name: "Mathematics", userId: "teacher-1" };
+      const mockSubject = { id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null };
 
       mockedSubjectService.getSubjectById.mockResolvedValue(mockSubject);
 
@@ -138,7 +138,7 @@ describe("Integration: Subject Endpoints", () => {
 
   describe("POST /api/v1/subject", () => {
     it("creates subject for Teacher role", async () => {
-      const mockSubject = { id: 1, name: "Mathematics", userId: "teacher-1" };
+      const mockSubject = { id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null };
 
       mockedSubjectService.createSubject.mockResolvedValue(mockSubject);
 
@@ -152,6 +152,36 @@ describe("Integration: Subject Endpoints", () => {
       expect(response.body.name).toBe("Mathematics");
     });
 
+    it("creates subject with imageUrl", async () => {
+      const mockSubject = {
+        id: 1,
+        name: "Mathematics",
+        userId: "teacher-1",
+        imageUrl: "https://example.com/image.jpg",
+      };
+
+      mockedSubjectService.createSubject.mockResolvedValue(mockSubject);
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .post("/api/v1/subject")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "Mathematics", imageUrl: "https://example.com/image.jpg" });
+
+      expect(response.status).toBe(201);
+      expect(response.body.imageUrl).toBe("https://example.com/image.jpg");
+    });
+
+    it("returns 400 for invalid imageUrl", async () => {
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .post("/api/v1/subject")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ name: "Mathematics", imageUrl: "not-a-url" });
+
+      expect(response.status).toBe(400);
+    });
+
     it("returns 403 for Student role", async () => {
       const token = generateStudentToken();
       const response = await request(app)
@@ -163,7 +193,7 @@ describe("Integration: Subject Endpoints", () => {
     });
 
     it("allows God role to create subject", async () => {
-      const mockSubject = { id: 1, name: "Mathematics", userId: "god-1" };
+      const mockSubject = { id: 1, name: "Mathematics", userId: "god-1", imageUrl: null };
 
       mockedSubjectService.createSubject.mockResolvedValue(mockSubject);
 
@@ -191,7 +221,7 @@ describe("Integration: Subject Endpoints", () => {
 
   describe("PUT /api/v1/subject/:id", () => {
     it("updates subject for owner", async () => {
-      const mockSubject = { id: 1, name: "Advanced Mathematics", userId: "teacher-1" };
+      const mockSubject = { id: 1, name: "Advanced Mathematics", userId: "teacher-1", imageUrl: null };
 
       mockedSubjectService.updateSubject.mockResolvedValue(mockSubject);
 
@@ -205,8 +235,28 @@ describe("Integration: Subject Endpoints", () => {
       expect(response.body.name).toBe("Advanced Mathematics");
     });
 
+    it("updates subject imageUrl", async () => {
+      const mockSubject = {
+        id: 1,
+        name: "Mathematics",
+        userId: "teacher-1",
+        imageUrl: "https://example.com/new-image.jpg",
+      };
+
+      mockedSubjectService.updateSubject.mockResolvedValue(mockSubject);
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .put("/api/v1/subject/1")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ imageUrl: "https://example.com/new-image.jpg" });
+
+      expect(response.status).toBe(200);
+      expect(response.body.imageUrl).toBe("https://example.com/new-image.jpg");
+    });
+
     it("returns 200 with existing subject when body is empty", async () => {
-      const existingSubject = { id: 1, name: "Mathematics", userId: "teacher-1" };
+      const existingSubject = { id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null };
 
       mockedSubjectService.updateSubject.mockResolvedValue(existingSubject);
 

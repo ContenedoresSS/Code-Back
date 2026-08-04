@@ -49,5 +49,5 @@
     "esm": true,
     "experimentalSpecifierResolution": "node"
   },
-  "exclude": ["node_modules", "prisma.config.ts", "prisma/seed.ts"]
+  "exclude": ["node_modules", "prisma.config.ts", "prisma/seed.ts", "tests", "vitest.config.ts"]
 }

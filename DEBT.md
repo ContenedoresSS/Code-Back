@@ -387,6 +387,26 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 
 ---
 
+## Pilar 13 — Gestión de archivos y medios
+
+### DEBT‑29: Subida directa de imágenes para materias
+
+- **Archivos**: `src/routes/subject.routes.ts`, `src/services/subject.service.ts`
+- **Problema**: Actualmente las materias solo aceptan una URL de imagen (`imageUrl`). Los profesores deben subir la imagen a un servicio externo (Imgur, S3, etc.) y luego pegar la URL. Esto es incómodo y propenso a enlaces rotos.
+- **Impacto**:
+  - Mala experiencia de usuario para profesores.
+  - Dependencia de servicios externos que pueden caer o cambiar sus políticas.
+  - URLs que se rompen con el tiempo, dejando materias sin imagen.
+- **Recomendación**:
+  1. Implementar endpoint de subida de imágenes con `multipart/form-data`.
+  2. Almacenar imágenes en el sistema de archivos del VPS (ej. `/uploads/subjects/`) o en un servicio de almacenamiento (S3, Cloudflare R2).
+  3. Validar tipo de archivo (solo JPEG, PNG, WebP) y tamaño máximo (ej. 5 MB).
+  4. Generar thumbnails automáticos para optimizar carga en el frontend.
+  5. Agregar endpoint para eliminar imágenes no utilizadas.
+  6. Considerar CDN para servir las imágenes eficientemente.
+
+---
+
 ## Resumen de prioridades
 
 | Prioridad | DEBTs | Pilar | Acción sugerida |
@@ -401,5 +421,6 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 | **Media** | 19, 21 | BD + auth | Índices, rate limit en login |
 | **Media** | 24, 25, 26 | Negocio | Endpoints de enrollment y submissions |
 | **Media** | 28 | CI/CD | Configurar VPS para usar compose.prod.yaml |
+| **Media** | 29 | Archivos | Implementar subida directa de imágenes para materias |
 | **Baja** | 18, 22, 23 | DX | Organizar tipos, CORS en env |
 | **Seguimiento** | 27 | OpenAPI | Migrar a zod-to-openapi cuando se implemente DEBT‑08 |

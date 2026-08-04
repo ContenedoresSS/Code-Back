@@ -32,6 +32,7 @@ describe("SubjectService", () => {
         id: 1,
         name: "Mathematics",
         userId: "teacher-1",
+        imageUrl: null,
       };
       mockPrisma.subject.create.mockResolvedValue(mockSubject);
 
@@ -43,6 +44,31 @@ describe("SubjectService", () => {
         data: {
           name: "Mathematics",
           userId: "teacher-1",
+          imageUrl: null,
+        },
+      });
+      expect(result).toEqual(mockSubject);
+    });
+
+    it("creates subject with imageUrl when provided", async () => {
+      const mockSubject = {
+        id: 1,
+        name: "Mathematics",
+        userId: "teacher-1",
+        imageUrl: "https://example.com/image.jpg",
+      };
+      mockPrisma.subject.create.mockResolvedValue(mockSubject);
+
+      const result = await subjectService.createSubject("teacher-1", {
+        name: "Mathematics",
+        imageUrl: "https://example.com/image.jpg",
+      });
+
+      expect(mockPrisma.subject.create).toHaveBeenCalledWith({
+        data: {
+          name: "Mathematics",
+          userId: "teacher-1",
+          imageUrl: "https://example.com/image.jpg",
         },
       });
       expect(result).toEqual(mockSubject);
@@ -174,8 +200,8 @@ describe("SubjectService", () => {
 
   describe("updateSubject", () => {
     it("updates subject name", async () => {
-      const existingSubject = { id: 1, name: "Math", userId: "teacher-1" };
-      const updatedSubject = { id: 1, name: "Advanced Math", userId: "teacher-1" };
+      const existingSubject = { id: 1, name: "Math", userId: "teacher-1", imageUrl: null };
+      const updatedSubject = { id: 1, name: "Advanced Math", userId: "teacher-1", imageUrl: null };
 
       mockPrisma.subject.findFirst.mockResolvedValue(existingSubject);
       mockPrisma.subject.update.mockResolvedValue(updatedSubject);
@@ -187,6 +213,52 @@ describe("SubjectService", () => {
       expect(mockPrisma.subject.update).toHaveBeenCalledWith({
         where: { id: 1 },
         data: { name: "Advanced Math" },
+      });
+      expect(result).toEqual(updatedSubject);
+    });
+
+    it("updates subject imageUrl", async () => {
+      const existingSubject = { id: 1, name: "Math", userId: "teacher-1", imageUrl: null };
+      const updatedSubject = {
+        id: 1,
+        name: "Math",
+        userId: "teacher-1",
+        imageUrl: "https://example.com/image.jpg",
+      };
+
+      mockPrisma.subject.findFirst.mockResolvedValue(existingSubject);
+      mockPrisma.subject.update.mockResolvedValue(updatedSubject);
+
+      const result = await subjectService.updateSubject(1, "teacher-1", {
+        imageUrl: "https://example.com/image.jpg",
+      });
+
+      expect(mockPrisma.subject.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { imageUrl: "https://example.com/image.jpg" },
+      });
+      expect(result).toEqual(updatedSubject);
+    });
+
+    it("clears subject imageUrl when set to null", async () => {
+      const existingSubject = {
+        id: 1,
+        name: "Math",
+        userId: "teacher-1",
+        imageUrl: "https://example.com/image.jpg",
+      };
+      const updatedSubject = { id: 1, name: "Math", userId: "teacher-1", imageUrl: null };
+
+      mockPrisma.subject.findFirst.mockResolvedValue(existingSubject);
+      mockPrisma.subject.update.mockResolvedValue(updatedSubject);
+
+      const result = await subjectService.updateSubject(1, "teacher-1", {
+        imageUrl: null,
+      });
+
+      expect(mockPrisma.subject.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: { imageUrl: null },
       });
       expect(result).toEqual(updatedSubject);
     });

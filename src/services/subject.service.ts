@@ -13,6 +13,7 @@ export class SubjectService implements ISubjectService {
         data: {
           name: data.name,
           userId: userId,
+          imageUrl: data.imageUrl ?? null,
         },
       });
 
@@ -93,10 +94,14 @@ export class SubjectService implements ISubjectService {
     try {
       const existingSubject = await this.getSubjectById(subjectId, userId);
 
-      const updateData: { name?: string } = {};
+      const updateData: { name?: string; imageUrl?: string | null } = {};
 
       if (data.name !== undefined) {
         updateData.name = data.name;
+      }
+
+      if (data.imageUrl !== undefined) {
+        updateData.imageUrl = data.imageUrl;
       }
 
       if (Object.keys(updateData).length === 0) {

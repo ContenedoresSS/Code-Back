@@ -7,10 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.15-alpha] - 2026-08-04
+
 ### Added
+- Image URL field for subjects to display cover images in frontend
+- Zod validation for subject endpoints (create and update)
+- Reusable validation middleware for request body validation
 - Comprehensive test suite with unit and integration tests
 - OpenAPI 3.1 specification with Swagger UI
 - Project documentation (AGENTS.md, DEBT.md, DEPLOY.md)
+- Production deployment configuration (compose.prod.yaml)
+- Deployment guide with CI/CD workflow documentation
 
 ## [0.0.14-alpha] - 2026-06-18
 
@@ -126,7 +133,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup
 - First commit
 
-[Unreleased]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.14-alpha...HEAD
+[Unreleased]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.15-alpha...HEAD
+[0.0.15-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.14-alpha...v0.0.15-alpha
 [0.0.14-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.13-alpha...v0.0.14-alpha
 [0.0.13-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.12-alpha...v0.0.13-alpha
 [0.0.12-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.11-alpha...v0.0.12-alpha
