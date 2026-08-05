@@ -2,6 +2,7 @@ import { ENV } from "./config/env.config.js";
 import cors from "cors";
 import type { CorsOptions } from "cors";
 import express from "express";
+import rateLimit from "express-rate-limit";
 import v1Routes from "./routes/index-v1.routes.js";
 
 const PORT = ENV.PORT;
@@ -27,6 +28,22 @@ export const corsOptions: CorsOptions = {
 const app = express();
 app.use(cors(corsOptions));
 app.use(express.json());
+
+const healthLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.get("/health", healthLimiter, (_req, res) => {
+  res.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || "unknown",
+  });
+});
+
 app.use("/api/v1", v1Routes);
 
 if (ENV.NODE_ENV === "development") {
