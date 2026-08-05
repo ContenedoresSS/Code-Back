@@ -1676,11 +1676,80 @@ components:
           description: Total de registros disponibles
 
     # ── Activity ──
+    ActivityRules:
+      title: ActivityRules
+      description: >
+        Reglas del editor y de la actividad, siempre completas. Cada regla se
+        aplica en una capa distinta: `allowCopy`, `allowPaste` y
+        `allowFileDownload` solo puede hacerlas cumplir el frontend;
+        `allowLanguageChange` solo el backend; `allowCodeEdit` y
+        `allowFileUpload` las previene el frontend y las verifica el backend al
+        recibir la entrega.
+      type: object
+      required:
+        [
+          allowCopy,
+          allowPaste,
+          allowFileDownload,
+          allowCodeEdit,
+          allowFileUpload,
+          allowLanguageChange,
+        ]
+      additionalProperties: false
+      properties:
+        allowCopy:
+          type: boolean
+          description: Permitir copiar código desde el editor
+        allowPaste:
+          type: boolean
+          description: Permitir pegar código en el editor
+        allowFileDownload:
+          type: boolean
+          description: Permitir descargar los archivos de código
+        allowCodeEdit:
+          type: boolean
+          description: Permitir modificar el código inicial
+        allowFileUpload:
+          type: boolean
+          description: Permitir agregar archivos de código
+        allowLanguageChange:
+          type: boolean
+          description: Permitir entregar en un lenguaje distinto al de la actividad
+
+    ActivityRulesPatch:
+      title: ActivityRulesPatch
+      description: >
+        Subconjunto de reglas a establecer. Las omitidas toman su valor por
+        defecto al crear, y conservan el valor actual al actualizar. Una clave
+        fuera del catálogo devuelve 400.
+      type: object
+      additionalProperties: false
+      properties:
+        allowCopy:
+          type: boolean
+          default: true
+        allowPaste:
+          type: boolean
+          default: true
+        allowFileDownload:
+          type: boolean
+          default: true
+        allowCodeEdit:
+          type: boolean
+          default: true
+        allowFileUpload:
+          type: boolean
+          default: true
+        allowLanguageChange:
+          type: boolean
+          default: false
+
     CreateActivityRequest:
       title: CreateActivityRequest
       description: Datos para crear una actividad de código
       type: object
       required: [subjectId, languageId, title]
+      additionalProperties: false
       properties:
         subjectId:
           type: integer
@@ -1706,19 +1775,14 @@ components:
           type: integer
           default: 0
           description: Límite de envíos (0 = ilimitado)
-        allowCopy:
-          type: boolean
-          default: true
-          description: Permitir copiar código
-        allowPaste:
-          type: boolean
-          default: true
-          description: Permitir pegar código
+        rules:
+          $ref: "#/components/schemas/ActivityRulesPatch"
 
     UpdateActivityRequest:
       title: UpdateActivityRequest
       description: Datos para actualizar una actividad
       type: object
+      additionalProperties: false
       properties:
         title:
           type: string
@@ -1738,12 +1802,8 @@ components:
         maxAttempts:
           type: integer
           description: Límite de envíos
-        allowCopy:
-          type: boolean
-          description: Permitir copiar código
-        allowPaste:
-          type: boolean
-          description: Permitir pegar código
+        rules:
+          $ref: "#/components/schemas/ActivityRulesPatch"
 
     Activity:
       title: Activity
@@ -1778,12 +1838,8 @@ components:
         maxAttempts:
           type: integer
           description: Límite de envíos (0 = ilimitado)
-        allowCopy:
-          type: boolean
-          description: Permitir copiar código
-        allowPaste:
-          type: boolean
-          description: Permitir pegar código
+        rules:
+          $ref: "#/components/schemas/ActivityRules"
         createdAt:
           type: string
           format: date-time
@@ -1922,12 +1978,8 @@ components:
           description: Archivos de código inicial
           items:
             $ref: "#/components/schemas/CodeFile"
-        allowCopy:
-          type: boolean
-          description: Permitir copiar código
-        allowPaste:
-          type: boolean
-          description: Permitir pegar código
+        rules:
+          $ref: "#/components/schemas/ActivityRules"
         maxAttempts:
           type: integer
           description: Límite de envíos (0 = ilimitado)

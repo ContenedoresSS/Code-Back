@@ -1,3 +1,5 @@
+import type { ActivityRules } from "../../config/activity-rules.catalog.js";
+
 export interface PublicTestCase {
   id: number;
   isHidden: boolean;
@@ -15,8 +17,7 @@ export interface StudentWorkspaceResponse {
     fileExtension: string;
   };
   starterCode: any;
-  allowCopy: boolean;
-  allowPaste: boolean;
+  rules: ActivityRules;
   maxAttempts: number;
   testCases: PublicTestCase[];
 }

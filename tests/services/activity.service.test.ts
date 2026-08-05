@@ -27,6 +27,9 @@ vi.mock("../../src/config/prisma.js", () => ({
 
 import activityService from "../../src/services/activity.service.js";
 import { UserRole } from "../../src/types/enums/role.enum.js";
+import { getDefaultActivityRules } from "../../src/helpers/activity-rules.helper.js";
+
+const DEFAULT_RULES = getDefaultActivityRules();
 
 describe("ActivityService", () => {
   beforeEach(() => {
@@ -44,8 +47,7 @@ describe("ActivityService", () => {
         languageId: 1,
         title: "Hello World",
         maxAttempts: 3,
-        allowCopy: true,
-        allowPaste: true,
+        rules: DEFAULT_RULES,
       };
 
       mockPrisma.subject.findFirst.mockResolvedValue(mockSubject);
@@ -60,6 +62,62 @@ describe("ActivityService", () => {
       });
 
       expect(result).toEqual(mockActivity);
+    });
+
+    it("persists catalog defaults when no rules are provided", async () => {
+      mockPrisma.subject.findFirst.mockResolvedValue({ id: 1, userId: "teacher-1" });
+      mockPrisma.programmingLanguage.findUnique.mockResolvedValue({ id: 1, name: "Python" });
+      mockPrisma.activity.create.mockResolvedValue({ id: "1", rules: DEFAULT_RULES });
+
+      await activityService.createActivity("teacher-1", {
+        subjectId: 1,
+        languageId: 1,
+        title: "Hello World",
+      });
+
+      expect(mockPrisma.activity.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ rules: DEFAULT_RULES }),
+      });
+    });
+
+    it("merges a partial rules patch over the catalog defaults", async () => {
+      mockPrisma.subject.findFirst.mockResolvedValue({ id: 1, userId: "teacher-1" });
+      mockPrisma.programmingLanguage.findUnique.mockResolvedValue({ id: 1, name: "Python" });
+      mockPrisma.activity.create.mockResolvedValue({ id: "1", rules: DEFAULT_RULES });
+
+      await activityService.createActivity("teacher-1", {
+        subjectId: 1,
+        languageId: 1,
+        title: "Hello World",
+        rules: { allowCopy: false, allowLanguageChange: true },
+      });
+
+      expect(mockPrisma.activity.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          rules: {
+            ...DEFAULT_RULES,
+            allowCopy: false,
+            allowLanguageChange: true,
+          },
+        }),
+      });
+    });
+
+    it("returns rules resolved from what the database stored", async () => {
+      mockPrisma.subject.findFirst.mockResolvedValue({ id: 1, userId: "teacher-1" });
+      mockPrisma.programmingLanguage.findUnique.mockResolvedValue({ id: 1, name: "Python" });
+      mockPrisma.activity.create.mockResolvedValue({
+        id: "1",
+        rules: { allowCopy: false },
+      });
+
+      const result = await activityService.createActivity("teacher-1", {
+        subjectId: 1,
+        languageId: 1,
+        title: "Hello World",
+      });
+
+      expect(result.rules).toEqual({ ...DEFAULT_RULES, allowCopy: false });
     });
 
     it("throws error when subject not found", async () => {
@@ -150,7 +208,35 @@ describe("ActivityService", () => {
       expect(mockPrisma.activity.findFirst).toHaveBeenCalledWith({
         where: { id: "1", professorId: "teacher-1" },
       });
-      expect(result).toEqual(mockActivity);
+      expect(result).toEqual({ ...mockActivity, rules: DEFAULT_RULES });
+    });
+
+    it("resolves partial stored rules against the catalog defaults", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "1",
+        professorId: "teacher-1",
+        rules: { allowCopy: false, allowLanguageChange: true },
+      });
+
+      const result = await activityService.getActivityById("1", UserRole.Teacher, "teacher-1");
+
+      expect(result.rules).toEqual({
+        ...DEFAULT_RULES,
+        allowCopy: false,
+        allowLanguageChange: true,
+      });
+    });
+
+    it("returns catalog defaults when stored rules are null", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "1",
+        professorId: "teacher-1",
+        rules: null,
+      });
+
+      const result = await activityService.getActivityById("1", UserRole.Teacher, "teacher-1");
+
+      expect(result.rules).toEqual(DEFAULT_RULES);
     });
 
     it("returns any activity for God role", async () => {
@@ -189,7 +275,56 @@ describe("ActivityService", () => {
         where: { id: "1" },
         data: { title: "New" },
       });
-      expect(result).toEqual(updatedActivity);
+      expect(result).toEqual({ ...updatedActivity, rules: DEFAULT_RULES });
+    });
+
+    it("merges a rules patch over the stored rules", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "1",
+        professorId: "teacher-1",
+        rules: { allowCopy: false },
+      });
+      mockPrisma.activity.update.mockResolvedValue({ id: "1", rules: {} });
+
+      await activityService.updateActivity("1", UserRole.Teacher, "teacher-1", {
+        rules: { allowCodeEdit: false },
+      });
+
+      expect(mockPrisma.activity.update).toHaveBeenCalledWith({
+        where: { id: "1" },
+        data: {
+          rules: { ...DEFAULT_RULES, allowCopy: false, allowCodeEdit: false },
+        },
+      });
+    });
+
+    it("does not write rules when the patch omits them", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "1",
+        professorId: "teacher-1",
+        rules: { allowCopy: false },
+      });
+      mockPrisma.activity.update.mockResolvedValue({ id: "1", rules: { allowCopy: false } });
+
+      await activityService.updateActivity("1", UserRole.Teacher, "teacher-1", { title: "New" });
+
+      expect(mockPrisma.activity.update).toHaveBeenCalledWith({
+        where: { id: "1" },
+        data: { title: "New" },
+      });
+    });
+
+    it("returns the existing activity when the patch is empty", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "1",
+        professorId: "teacher-1",
+        rules: { allowPaste: false },
+      });
+
+      const result = await activityService.updateActivity("1", UserRole.Teacher, "teacher-1", {});
+
+      expect(mockPrisma.activity.update).not.toHaveBeenCalled();
+      expect(result.rules).toEqual({ ...DEFAULT_RULES, allowPaste: false });
     });
 
     it("updates languageId when language exists", async () => {
@@ -212,7 +347,7 @@ describe("ActivityService", () => {
         where: { id: "1" },
         data: { languageId: 2 },
       });
-      expect(result).toEqual(updatedActivity);
+      expect(result).toEqual({ ...updatedActivity, rules: DEFAULT_RULES });
     });
 
     it("throws error when languageId is invalid", async () => {
@@ -263,8 +398,7 @@ describe("ActivityService", () => {
         title: "Hello World",
         description: "Description",
         starterCode: "print('hello')",
-        allowCopy: true,
-        allowPaste: true,
+        rules: { allowCopy: false, allowPaste: false },
         maxAttempts: 3,
         language: { id: 1, name: "Python", fileExtension: "py" },
         testCases: [
@@ -288,6 +422,44 @@ describe("ActivityService", () => {
       expect(result.testCases[1]).toEqual({ id: 2, isHidden: true });
     });
 
+    it("returns rules resolved against the catalog defaults", async () => {
+      mockPrisma.activity.findUnique.mockResolvedValue({
+        id: "1",
+        title: "Test",
+        description: null,
+        starterCode: null,
+        rules: { allowCopy: false, allowFileUpload: false },
+        maxAttempts: 0,
+        language: { id: 1, name: "Python", fileExtension: "py" },
+        testCases: [],
+      });
+
+      const result = await activityService.getWorkspaceForStudent("1");
+
+      expect(result.rules).toEqual({
+        ...DEFAULT_RULES,
+        allowCopy: false,
+        allowFileUpload: false,
+      });
+    });
+
+    it("returns catalog defaults when the activity has no stored rules", async () => {
+      mockPrisma.activity.findUnique.mockResolvedValue({
+        id: "1",
+        title: "Test",
+        description: null,
+        starterCode: null,
+        rules: null,
+        maxAttempts: 0,
+        language: { id: 1, name: "Python", fileExtension: "py" },
+        testCases: [],
+      });
+
+      const result = await activityService.getWorkspaceForStudent("1");
+
+      expect(result.rules).toEqual(DEFAULT_RULES);
+    });
+
     it("throws error when activity not found", async () => {
       mockPrisma.activity.findUnique.mockResolvedValue(null);
 
@@ -302,8 +474,7 @@ describe("ActivityService", () => {
         title: "Test",
         description: null,
         starterCode: null,
-        allowCopy: true,
-        allowPaste: true,
+        rules: null,
         maxAttempts: 0,
         language: { id: 1, name: "Python", fileExtension: "py" },
         testCases: [{ id: 1, isHidden: false, input: null, expectedOutput: "b3V0cHV0" }],

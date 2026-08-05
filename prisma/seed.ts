@@ -188,8 +188,7 @@ async function seedSubjectsAndActivities(teacher: User, student: User) {
         description:
           "Escribe un programa en C++ que lea dos enteros por entrada estándar y devuelva su suma.",
         maxAttempts: 5,
-        allowCopy: true,
-        allowPaste: true,
+        rules: { allowCopy: true, allowPaste: true },
         starterCode: [
           {
             name: "main.cpp",

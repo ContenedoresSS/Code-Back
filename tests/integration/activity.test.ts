@@ -21,8 +21,14 @@ describe("Integration: Activity Endpoints", () => {
         description: "Description",
         language: { id: 1, name: "Python", fileExtension: "py" },
         starterCode: [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }],
-        allowCopy: true,
-        allowPaste: true,
+        rules: {
+          allowCopy: true,
+          allowPaste: true,
+          allowFileDownload: true,
+          allowCodeEdit: true,
+          allowFileUpload: true,
+          allowLanguageChange: false,
+        },
         maxAttempts: 3,
         testCases: [{ id: 1, isHidden: false, input: "aW5wdXQ=", expectedOutput: "b3V0cHV0" }],
       };
@@ -35,6 +41,40 @@ describe("Integration: Activity Endpoints", () => {
       expect(response.body).toHaveProperty("activityId");
       expect(response.body).toHaveProperty("title");
       expect(response.body).toHaveProperty("testCases");
+    });
+
+    it("exposes the full rules object to the student editor", async () => {
+      mockedActivityService.getWorkspaceForStudent.mockResolvedValue({
+        activityId: "1",
+        title: "Hello World",
+        description: null,
+        language: { id: 1, name: "Python", fileExtension: "py" },
+        starterCode: null,
+        rules: {
+          allowCopy: false,
+          allowPaste: false,
+          allowFileDownload: true,
+          allowCodeEdit: true,
+          allowFileUpload: false,
+          allowLanguageChange: false,
+        },
+        maxAttempts: 0,
+        testCases: [],
+      });
+
+      const response = await request(app).get("/api/v1/activity/1/workspace");
+
+      expect(response.status).toBe(200);
+      expect(response.body.rules).toEqual({
+        allowCopy: false,
+        allowPaste: false,
+        allowFileDownload: true,
+        allowCodeEdit: true,
+        allowFileUpload: false,
+        allowLanguageChange: false,
+      });
+      expect(response.body).not.toHaveProperty("allowCopy");
+      expect(response.body).not.toHaveProperty("allowPaste");
     });
 
     it("returns 404 when activity not found", async () => {
@@ -166,6 +206,40 @@ describe("Integration: Activity Endpoints", () => {
       expect(response.status).toBe(400);
       expect(response.body.error).toBe("Validation failed");
       expect(response.body.details[0].field).toContain("starterCode");
+    });
+
+    it("returns 400 when rules contain a key outside the catalog", async () => {
+      const token = generateTeacherToken();
+      const response = await request(app)
+        .post("/api/v1/activity")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          title: "Hello World",
+          subjectId: 1,
+          languageId: 1,
+          rules: { allowCopy: false, allowTimeTravel: true },
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe("Validation failed");
+      expect(response.body.details[0].field).toContain("rules");
+    });
+
+    it("returns 400 when a rule value is not a boolean", async () => {
+      const token = generateTeacherToken();
+      const response = await request(app)
+        .post("/api/v1/activity")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          title: "Hello World",
+          subjectId: 1,
+          languageId: 1,
+          rules: { allowCodeEdit: "false" },
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe("Validation failed");
+      expect(response.body.details[0].field).toBe("rules.allowCodeEdit");
     });
 
     it("returns 400 when starterCode file missing name", async () => {
