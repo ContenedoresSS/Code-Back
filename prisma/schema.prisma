@@ -98,8 +98,7 @@ model Activity {
   description  String?  @db.Text
   starterCode  Json?    @map("starter_code")
   maxAttempts  Int      @default(0) @map("max_attempts")
-  allowCopy    Boolean  @default(true) @map("allow_copy")
-  allowPaste   Boolean  @default(true) @map("allow_paste")
+  rules        Json?    @map("rules")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
   professor    User                @relation("ProfessorActivities", fields: [professorId], references: [id])
 

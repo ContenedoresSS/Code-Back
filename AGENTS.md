@@ -22,7 +22,7 @@ El backend se despliega con **Docker** sobre un **VPS en Oracle Cloud**.
 ## 2. Flujo de negocio principal
 
 1. **God** crea códigos de invitación para profesores.
-2. **Profesor** se registra con la invitación → crea una **materia** → crea una **actividad de código** (título, descripción, lenguaje, código inicial, intentos máximos, flags copy/paste) → agrega **casos de prueba** (públicos y ocultos).
+2. **Profesor** se registra con la invitación → crea una **materia** → crea una **actividad de código** (título, descripción, lenguaje, código inicial, intentos máximos, reglas del editor) → agrega **casos de prueba** (públicos y ocultos).
 3. **Alumno** se registra con email → se matricula a la materia → abre la actividad desde Moodle (iframe) → escribe código en el editor → lo **ejecuta** para probar (rate‑limited) → **envía** la solución definitiva.
 4. El backend **evalúa automáticamente** el código contra los casos de prueba y devuelve una calificación sobre 100.
 5. El profesor revisa las entregas y calificaciones de sus alumnos.
@@ -35,10 +35,32 @@ El backend se despliega con **Docker** sobre un **VPS en Oracle Cloud**.
 | ------------------------------- | -------------------------------- | -------------------------------------------------------------- |
 | **maxAttempts**                 | `Activity.maxAttempts`           | Límite pedagógico de envíos por actividad (0 = ilimitado)      |
 | **Rate limiting**               | Endpoints `/execution/*` y submit | 2 peticiones cada 5 min por IP — protege el VPS y es requisito académico |
-| **allowCopy / allowPaste**      | `Activity.allowCopy` / `allowPaste` | Integridad académica en exámenes; el frontend bloquea copiar/pegar |
+| **Reglas de la actividad**      | `Activity.rules` (JSONB) + catálogo en `src/config/activity-rules.catalog.ts` | Integridad académica en exámenes. 6 reglas booleanas; cada una declara en qué capa se aplica (ver §3.1) |
 | **Casos de prueba ocultos**     | `TestCase.isHidden`              | El workspace muestra solo casos públicos; los ocultos se usan para evaluar |
 | **Timeout de ejecución**        | Contenedor Docker (10 s)         | Evita bucles infinitos                                          |
 | **Sandboxing del contenedor**   | 128 MB RAM, CPU quota 50k, PID 30, red deshabilitada | Aislamiento y protección del host                      |
+
+---
+
+## 3.1 Reglas de la actividad
+
+Las reglas del editor viven en la columna **`activities.rules` (JSONB)**, no en columnas por regla. La fuente única de verdad es el catálogo `src/config/activity-rules.catalog.ts`, que declara para cada regla su **valor por defecto** y la **capa que la hace cumplir**:
+
+| Regla                 | Default | Se aplica en | Cómo se hace cumplir                                                      |
+| --------------------- | ------- | ------------ | ------------------------------------------------------------------------- |
+| `allowCopy`           | `true`  | `FRONTEND`   | El editor bloquea el portapapeles; el backend no puede verificarlo        |
+| `allowPaste`          | `true`  | `FRONTEND`   | Ídem                                                                      |
+| `allowFileDownload`   | `true`  | `FRONTEND`   | El editor oculta el botón de descarga                                     |
+| `allowCodeEdit`       | `true`  | `BOTH`       | Editor en `readOnly` + el backend compara la entrega contra `starterCode` |
+| `allowFileUpload`     | `true`  | `BOTH`       | Editor sin botón de subida + el backend rechaza archivos nuevos           |
+| `allowLanguageChange` | `false` | `BACKEND`    | Si es `false`, la entrega se evalúa con `activity.languageId`             |
+
+Reglas de trabajo sobre este subsistema:
+
+- **Agregar una regla es una línea en el catálogo.** No lleva migración: `resolveActivityRules` completa contra los defaults lo que no esté guardado, así que las actividades existentes siguen siendo válidas.
+- **Las reglas `FRONTEND` son disuasión, no control.** Se saltan con devtools. No usarlas como garantía de integridad en un examen; las que protegen de verdad son las `BOTH` y `BACKEND`, porque el backend las verifica.
+- Los schemas de `activity` son **estrictos** (`z.strictObject`): un campo o una regla desconocida devuelve 400 en lugar de descartarse en silencio.
+- La resolución y la mezcla viven en `src/helpers/activity-rules.helper.ts`, con sus tests. El service nunca lee `activity.rules` en crudo.
 
 ---
 

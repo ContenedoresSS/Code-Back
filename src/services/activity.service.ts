@@ -1,3 +1,4 @@
+import type { Activity } from "@prisma/client";
 import prisma from "../config/prisma.js";
 import type { IActivityService } from "./interfaces/activity.service.interface.js";
 import type { CreateActivityRequest } from "../types/requests/create-activity-request.model.js";
@@ -10,8 +11,20 @@ import type {
   PublicTestCase,
 } from "../types/responses/student-workspace-response.js";
 import { UserRole } from "../types/enums/role.enum.js";
+import {
+  getDefaultActivityRules,
+  mergeActivityRules,
+  resolveActivityRules,
+} from "../helpers/activity-rules.helper.js";
 
 export class ActivityService implements IActivityService {
+  private toActivityResponse(activity: Activity): ActivityResponse {
+    return {
+      ...activity,
+      rules: resolveActivityRules(activity.rules),
+    };
+  }
+
   public async createActivity(
     professorId: string,
     data: CreateActivityRequest
@@ -42,12 +55,11 @@ export class ActivityService implements IActivityService {
           description: data.description ?? null,
           starterCode: data.starterCode ? (data.starterCode as any) : null,
           maxAttempts: data.maxAttempts ?? 0,
-          allowCopy: data.allowCopy ?? true,
-          allowPaste: data.allowPaste ?? true,
+          rules: mergeActivityRules(getDefaultActivityRules(), data.rules ?? {}),
         },
       });
 
-      return newActivity as ActivityResponse;
+      return this.toActivityResponse(newActivity);
     } catch (error: any) {
       if (error.message.includes("curso no existe") || error.message.includes("lenguaje")) {
         throw error;
@@ -118,7 +130,7 @@ export class ActivityService implements IActivityService {
         throw new Error("Actividad no encontrada o no tienes permisos para acceder a ella.");
       }
 
-      return activity as ActivityResponse;
+      return this.toActivityResponse(activity);
     } catch (error: any) {
       if (error.message.includes("Actividad no encontrada")) {
         throw error;
@@ -141,8 +153,10 @@ export class ActivityService implements IActivityService {
       if (data.title !== undefined) updateData.title = data.title;
       if (data.description !== undefined) updateData.description = data.description ?? null;
       if (data.maxAttempts !== undefined) updateData.maxAttempts = data.maxAttempts;
-      if (data.allowCopy !== undefined) updateData.allowCopy = data.allowCopy;
-      if (data.allowPaste !== undefined) updateData.allowPaste = data.allowPaste;
+
+      if (data.rules !== undefined) {
+        updateData.rules = mergeActivityRules(existingActivity.rules, data.rules);
+      }
 
       if (data.starterCode !== undefined) {
         updateData.starterCode = data.starterCode ? (data.starterCode as any) : null;
@@ -169,7 +183,7 @@ export class ActivityService implements IActivityService {
         data: updateData,
       });
 
-      return updatedActivity as ActivityResponse;
+      return this.toActivityResponse(updatedActivity);
     } catch (error: any) {
       if (error.message.includes("Actividad no encontrada") || error.message.includes("lenguaje")) {
         throw error;
@@ -240,8 +254,7 @@ export class ActivityService implements IActivityService {
           fileExtension: activity.language.fileExtension,
         },
         starterCode: activity.starterCode,
-        allowCopy: activity.allowCopy,
-        allowPaste: activity.allowPaste,
+        rules: resolveActivityRules(activity.rules),
         maxAttempts: activity.maxAttempts,
         testCases: secureTestCases,
       };

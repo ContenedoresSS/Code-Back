@@ -1,4 +1,5 @@
 import type { CodeFile } from "../models/execution/code-file.model.js";
+import type { ActivityRulesPatch } from "../../config/activity-rules.catalog.js";
 
 export interface UpdateActivityRequest {
   title?: string;
@@ -6,6 +7,5 @@ export interface UpdateActivityRequest {
   languageId?: number;
   starterCode?: CodeFile[];
   maxAttempts?: number;
-  allowCopy?: boolean;
-  allowPaste?: boolean;
+  rules?: ActivityRulesPatch;
 }

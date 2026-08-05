@@ -1,3 +1,5 @@
+import type { ActivityRules } from "../../config/activity-rules.catalog.js";
+
 export interface ActivityResponse {
   id: string;
   professorId: string;
@@ -7,7 +9,6 @@ export interface ActivityResponse {
   description: string | null;
   starterCode: any | null;
   maxAttempts: number;
-  allowCopy: boolean;
-  allowPaste: boolean;
+  rules: ActivityRules;
   createdAt: Date;
 }
