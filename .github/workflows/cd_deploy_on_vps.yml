@@ -57,6 +57,7 @@ jobs:
               deployment_id: Number('${{ needs.create-deployment.outputs.deployment_id }}'),
               state: 'in_progress',
               description: 'Deploying to VPS...',
+              environment_url: 'https://codepanel.orchfr.duckdns.org/api',
             });
 
       - name: Copy compose to VPS
@@ -66,8 +67,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "compose.prod.yaml"
-          target: "/opt/code-panel-back/compose.yml"
-          strip_components: 1
+          target: "/opt/code-panel-back/"
 
       - name: Deploy via SSH
         id: deploy
@@ -78,6 +78,9 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /opt/code-panel-back
+            
+            # Renombrar compose de prod a compose.yml
+            [ -f compose.prod.yaml ] && mv compose.prod.yaml compose.yml || true
             
             # Limpiar compose antiguo (idempotente)
             [ -f compose.yaml ] && mv compose.yaml compose.yaml.bak || true
@@ -114,7 +117,7 @@ jobs:
           RETRIES=0
           
           while [ $RETRIES -lt $MAX_RETRIES ]; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://codepanel.orchfr.duckdns.org/health || echo "000")
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://codepanel.orchfr.duckdns.org/api/health || echo "000")
             
             if [ "$HTTP_CODE" = "200" ]; then
               echo "Health check passed!"
@@ -145,6 +148,7 @@ jobs:
               deployment_id: Number('${{ needs.create-deployment.outputs.deployment_id }}'),
               state: 'in_progress',
               description: 'Rolling back to previous version...',
+              environment_url: 'https://codepanel.orchfr.duckdns.org/api',
             });
 
       - name: Rollback via SSH
@@ -195,4 +199,5 @@ jobs:
               deployment_id: Number('${{ needs.create-deployment.outputs.deployment_id }}'),
               state: state,
               description: description,
+              environment_url: state === 'success' ? 'https://codepanel.orchfr.duckdns.org/api' : undefined,
             });

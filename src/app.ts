@@ -36,7 +36,7 @@ const healthLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-app.get("/health", healthLimiter, (_req, res) => {
+app.get("/api/health", healthLimiter, (_req, res) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),

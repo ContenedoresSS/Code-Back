@@ -50,7 +50,7 @@ paths:
   # ══════════════════════════════════════════════
   #  Health Check
   # ══════════════════════════════════════════════
-  /health:
+  /api/health:
     get:
       operationId: healthCheck
       tags: [Health]
