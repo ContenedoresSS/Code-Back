@@ -44,6 +44,9 @@ jobs:
     outputs:
       previous_tag: ${{ steps.save_tag.outputs.previous_tag }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Update Deployment Status to In Progress
         uses: actions/github-script@v7
         with:
@@ -56,6 +59,16 @@ jobs:
               description: 'Deploying to VPS...',
             });
 
+      - name: Copy compose to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "compose.prod.yaml"
+          target: "/opt/code-panel-back/compose.yml"
+          strip_components: 1
+
       - name: Deploy via SSH
         id: deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -66,10 +79,13 @@ jobs:
           script: |
             cd /opt/code-panel-back
             
+            # Limpiar compose antiguo (idempotente)
+            [ -f compose.yaml ] && mv compose.yaml compose.yaml.bak || true
+            
             # Guardar tag de la imagen actual como previous
-            CURRENT_IMAGE=$(docker inspect --format='{{.Config.Image}}' code-panel-back 2>/dev/null || echo "none")
+            CURRENT_IMAGE=$(sudo /usr/bin/docker inspect --format='{{.Config.Image}}' code-panel-back 2>/dev/null || echo "none")
             if [ "$CURRENT_IMAGE" != "none" ]; then
-              docker tag $CURRENT_IMAGE ghcr.io/contenedoresss/code-panel-backend:previous
+              sudo /usr/bin/docker tag $CURRENT_IMAGE ghcr.io/contenedoresss/code-panel-backend:previous
               echo "previous_tag=$CURRENT_IMAGE" >> $GITHUB_OUTPUT
             fi
             
@@ -141,12 +157,12 @@ jobs:
             cd /opt/code-panel-back
             
             # Verificar que existe imagen previous
-            if docker image inspect ghcr.io/contenedoresss/code-panel-backend:previous >/dev/null 2>&1; then
+            if sudo /usr/bin/docker image inspect ghcr.io/contenedoresss/code-panel-backend:previous >/dev/null 2>&1; then
               # Detener contenedor actual
               sudo /usr/bin/docker compose down
               
               # Taggear previous como latest
-              docker tag ghcr.io/contenedoresss/code-panel-backend:previous ghcr.io/contenedoresss/code-panel-backend:latest
+              sudo /usr/bin/docker tag ghcr.io/contenedoresss/code-panel-backend:previous ghcr.io/contenedoresss/code-panel-backend:latest
               
               # Reiniciar con imagen anterior
               sudo /usr/bin/docker compose up -d
