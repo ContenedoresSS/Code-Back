@@ -174,7 +174,7 @@ docker compose -f compose.prod.yaml up -d
 
 ```bash
 # Clonar el repositorio temporalmente para el build
-git clone https://github.com/ContenedoresSS/Code-Back.git /tmp/code-back
+git clone https://github.com/ContenedoresSS/Code-Panel-Backend.git /tmp/code-back
 cd /opt/code-panel-back
 
 # Copiar el compose.prod.yaml y Dockerfile desde el repo
@@ -394,6 +394,8 @@ Los logs aparecen en la pestaña **Actions** del repositorio.
 
 ## 8. Proceso de versionamiento y CHANGELOG
 
+> El **procedimiento normativo** del ciclo de release está en `AGENTS.md` §16, incluidas las verificaciones previas, el punto de aprobación del líder y las advertencias sobre migraciones y rollback. Esta sección cubre el detalle operativo del versionamiento y el CHANGELOG.
+
 ### 8.1 Versionamiento SemVer
 
 Este proyecto utiliza [Semantic Versioning](https://semver.org/lang/es/) (SemVer) con el formato `MAJOR.MINOR.PATCH`:
@@ -409,17 +411,33 @@ v0.0.14-alpha
 
 ### 8.2 Flujo de release
 
-1. **Desarrollar features** en ramas locales
-2. **Merge a main** cuando esté listo
-3. **Actualizar CHANGELOG.md** (ver sección 8.3)
-4. **Crear y push del tag**:
+1. **Desarrollar features** en ramas y mergear a `main` vía PR (nunca commits directos a `main`)
+2. **Sincronizar `main` y los tags** antes de calcular la versión:
    ```bash
-   git tag v0.0.15-alpha
-   git push origin v0.0.15-alpha
+   git checkout main
+   git fetch origin --tags --force
+   git pull --rebase origin main
+   git tag --list --sort=-v:refname | head -1   # última versión publicada
    ```
-5. **CI/CD se ejecuta automáticamente**:
-   - CI: Build multiplataforma → push a `ghcr.io`
-   - CD: SSH al VPS → `docker compose pull && up -d`
+3. **Actualizar CHANGELOG.md** (ver sección 8.3)
+4. **Commit y push del CHANGELOG**:
+   ```bash
+   git add CHANGELOG.md
+   git commit -m "docs: update CHANGELOG for v0.0.20-alpha"
+   git push origin main
+   ```
+5. **Crear el tag anotado y pushearlo** — esto dispara el deploy a producción:
+   ```bash
+   git tag -a v0.0.20-alpha -m "v0.0.20-alpha" -m "Added: ..." -m "Fixed: ..."
+   git push origin v0.0.20-alpha
+   ```
+   El tag se crea **anotado** (`-a`, con comentario propio) y se pushea **individualmente**, nunca con `git push --tags`.
+6. **CI/CD se ejecuta automáticamente**:
+   - CI (`cicd_docker.yml`): lint + typecheck → tests → build multiplataforma → push a `ghcr.io` con `:vX.Y.Z-alpha` y `:latest`
+   - CD (`cd_deploy_on_vps.yml`): SCP del compose → SSH al VPS → `docker compose pull && up -d` → health check
+7. **Verificar el resultado**: los dos runs en verde, el Deployment en `success` y `/api/health` respondiendo `200`.
+
+> ⚠️ El pipeline **no aplica migraciones de Prisma** (ver sección 5.5) y el **rollback automático no funciona** (`DEBT.md` DEBT‑30). Si el health check falla, asume que la app quedó caída y revierte manualmente con la sección 9, usando el tag inmutable de la versión anterior.
 
 ### 8.3 Mantener el CHANGELOG
 
@@ -453,10 +471,12 @@ El archivo `CHANGELOG.md` sigue el formato [Keep a Changelog](https://keepachang
    - Corrección del bug Z
    ```
 
-3. **Agregar el enlace de comparación** al final del archivo:
+3. **Actualizar los dos enlaces del pie del archivo.** Hay que agregar la línea de la versión nueva **y** reapuntar la de `[Unreleased]` a la tag recién creada:
    ```markdown
-   [0.0.15-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.14-alpha...v0.0.15-alpha
+   [Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.20-alpha...HEAD
+   [0.0.20-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.19-alpha...v0.0.20-alpha
    ```
+   Olvidar el enlace de `[Unreleased]` deja el comparador apuntando a una versión vieja.
 
 ### 8.4 Categorías del CHANGELOG
 
@@ -472,22 +492,32 @@ Usa estas categorías para organizar los cambios:
 ### 8.5 Ejemplo completo de release
 
 ```bash
+# 0. Sincronizar main y los tags, y ver la última versión publicada
+git checkout main
+git fetch origin --tags --force
+git pull --rebase origin main
+git tag --list --sort=-v:refname | head -1        # → v0.0.19-alpha
+
 # 1. Actualizar CHANGELOG.md
-# (editar manualmente agregando cambios bajo [Unreleased])
+#    - mover [Unreleased] a ## [0.0.20-alpha] - 2026-08-05
+#    - actualizar los dos enlaces del pie (Unreleased y la versión nueva)
 
-# 2. Commit del CHANGELOG actualizado
+# 2. Commit y push del CHANGELOG
 git add CHANGELOG.md
-git commit -m "docs: update CHANGELOG for v0.0.15-alpha"
-
-# 3. Crear tag
-git tag v0.0.15-alpha
-
-# 4. Push del commit y el tag
+git commit -m "docs: update CHANGELOG for v0.0.20-alpha"
 git push origin main
-git push origin v0.0.15-alpha
+
+# 3. Crear el tag anotado (con comentario propio)
+git tag -a v0.0.20-alpha -m "v0.0.20-alpha" -m "Added: ..." -m "Fixed: ..."
+
+# 4. Push del tag — esto dispara el deploy a producción
+git push origin v0.0.20-alpha
+
+# 5. Verificar
+curl -s https://codepanel.orchfr.duckdns.org/api/health
 ```
 
-El CI/CD se ejecutará automáticamente y desplegará la nueva versión.
+El CI/CD se ejecutará automáticamente y desplegará la nueva versión. **Verifica siempre** los dos runs de Actions, el estado del Deployment y el health check: el rollback automático no es confiable (`DEBT.md` DEBT‑30).
 
 ---
 
