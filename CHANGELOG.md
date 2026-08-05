@@ -7,12 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.20-alpha] - 2026-08-05
+
 ### Added
+- Extensible activity rules system: the six editor rules live in a single `rules` JSON column, driven by a catalog that declares each rule's default and the layer that enforces it
+- Four new activity rules teachers can configure: allow code editing, allow language change, allow file upload and allow file download
+- Backend enforcement for the rules it owns: a submission is rejected with 403 when it edits the starter code with `allowCodeEdit` off, or adds and removes files with `allowFileUpload` off
+- Optional `languageId` on submit, accepted only when the activity has `allowLanguageChange` enabled
 - Agent workflow protocol with mandatory TDD, verification gates, playbooks and PR template (AGENTS.md section 15)
 - Release and deploy cycle protocol with SemVer, annotated tags and CHANGELOG procedure (AGENTS.md section 16)
 - Technical debt entry for the broken automatic rollback in the VPS deploy (DEBT-30)
 
 ### Changed
+- **Breaking**: activity endpoints replace the flat `allowCopy` and `allowPaste` fields with a `rules` object containing all six rules
+- Activity request schemas now reject unknown fields with 400 instead of discarding them silently
 - Deploy guide aligned with the release protocol: tag synchronization, annotated tags and CHANGELOG link updates
 
 ## [0.0.19-alpha] - 2026-08-05
@@ -181,7 +189,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup
 - First commit
 
-[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.19-alpha...HEAD
+[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.20-alpha...HEAD
+[0.0.20-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.19-alpha...v0.0.20-alpha
 [0.0.19-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.18-alpha...v0.0.19-alpha
 [0.0.18-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.17-alpha...v0.0.18-alpha
 [0.0.17-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.16-alpha...v0.0.17-alpha
