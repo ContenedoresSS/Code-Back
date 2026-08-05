@@ -344,13 +344,22 @@ chore/actualizar-deps     # Mantenimiento
 
 2. **Trabajar** siguiendo las directivas del proyecto (código, tests, formato)
 
-3. **Commits** siguiendo Conventional Commits:
+3. **Formatear código** (automático con pre-commit hook):
+   ```bash
+   npm run format  # Opcional, el hook lo hace automáticamente
+   ```
+
+4. **Commits** siguiendo Conventional Commits:
    ```bash
    git commit -m "feat: agregar validación de email"
    git commit -m "fix: corregir rate limiter"
    ```
+   El pre-commit hook (`husky` + `lint-staged`) formatea automáticamente solo los archivos staged.
+   El hook `commit-msg` valida que el mensaje siga Conventional Commits.
 
-4. **Push** a la rama:
+   **Tipos permitidos**: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
+
+5. **Push** a la rama:
    ```bash
    git push origin feat/nueva-feature
    ```
