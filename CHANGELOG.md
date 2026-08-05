@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Agent workflow protocol with mandatory TDD, verification gates, playbooks and PR template (AGENTS.md section 15)
+- Release and deploy cycle protocol with SemVer, annotated tags and CHANGELOG procedure (AGENTS.md section 16)
+- Technical debt entry for the broken automatic rollback in the VPS deploy (DEBT-30)
+
+### Changed
+- Deploy guide aligned with the release protocol: tag synchronization, annotated tags and CHANGELOG link updates
+
 ## [0.0.19-alpha] - 2026-08-05
 
 ### Added
