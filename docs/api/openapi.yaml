@@ -874,6 +874,12 @@ paths:
         - Auth opcional: usuarios no autenticados pueden ejecutar pero sus
           envíos no se persisten en BD ni se les aplica límite de intentos.
         - **Rate‑limited**: 2 peticiones cada 5 minutos por IP.
+        - Se verifican las reglas de la actividad (`rules`) que le corresponden
+          al backend. Si `allowCodeEdit` es `false`, el código enviado debe ser
+          idéntico al `starterCode`; si `allowFileUpload` es `false`, no se
+          puede agregar ni quitar archivos. Ambas devuelven `403`. Una actividad
+          sin `starterCode` no tiene referencia contra la que comparar, así que
+          esas dos reglas no se aplican.
       security: [] # optional auth
       requestBody:
         required: true
@@ -888,6 +894,14 @@ paths:
                   items:
                     $ref: "#/components/schemas/CodeFile"
                   description: Archivos de código en Base64
+                languageId:
+                  type: integer
+                  minimum: 1
+                  description: >
+                    Lenguaje con el que evaluar la entrega. Solo se toma en
+                    cuenta si la actividad tiene `allowLanguageChange: true`;
+                    en caso contrario se ignora y se usa el lenguaje de la
+                    actividad. Si se envía y no existe, devuelve `404`.
       responses:
         "200":
           description: Resultado de la evaluación
@@ -898,13 +912,19 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
-          description: Límite máximo de intentos alcanzado
+          description: >
+            Límite máximo de intentos alcanzado, o una regla de la actividad
+            impide la entrega (`allowCodeEdit` o `allowFileUpload`)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
         "404":
-          $ref: "#/components/responses/NotFound"
+          description: La actividad no existe, o el `languageId` enviado no existe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "429":
           $ref: "#/components/responses/TooManyRequests"
 

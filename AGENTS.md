@@ -61,6 +61,8 @@ Reglas de trabajo sobre este subsistema:
 - **Las reglas `FRONTEND` son disuasión, no control.** Se saltan con devtools. No usarlas como garantía de integridad en un examen; las que protegen de verdad son las `BOTH` y `BACKEND`, porque el backend las verifica.
 - Los schemas de `activity` son **estrictos** (`z.strictObject`): un campo o una regla desconocida devuelve 400 en lugar de descartarse en silencio.
 - La resolución y la mezcla viven en `src/helpers/activity-rules.helper.ts`, con sus tests. El service nunca lee `activity.rules` en crudo.
+- **Sin `starterCode`, `allowCodeEdit` y `allowFileUpload` no se aplican.** No hay referencia contra la que comparar, y rechazar dejaría la actividad inentregable por un error de configuración del profesor. La comparación de contenido normaliza CRLF a LF, porque Monaco puede enviar CRLF en Windows. Todo esto vive en `src/helpers/submission-rules.helper.ts`.
+- Una violación de regla devuelve **403**, igual que `maxAttempts`: es una restricción pedagógica, no un request mal formado.
 
 ---
 
