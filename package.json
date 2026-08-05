@@ -16,12 +16,17 @@
     "db:init": "npx prisma generate && prisma migrate dev && prisma db seed",
     "db:migrate": "prisma migrate dev",
     "db:status": "prisma migrate status",
-    "docs:validate": "redocly lint docs/api/openapi.yaml"
+    "docs:validate": "redocly lint docs/api/openapi.yaml",
+    "prepare": "husky",
+    "prepare": "husky"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
+  "lint-staged": {
+    "*.{ts,js,json}": "prettier --write"
+  },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.6.0",
@@ -40,6 +45,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
     "@redocly/cli": "^2.41.2",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
@@ -52,6 +59,8 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@types/tar-stream": "^3.1.4",
     "@vitest/coverage-v8": "^4.1.10",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
     "prettier": "3.8.3",
     "prisma": "^7.7.0",
     "supertest": "^7.2.2",
