@@ -35,7 +35,7 @@ jobs:
               auto_merge: false,
               required_contexts: [],
             });
-            return deployment.data.id;
+            core.setOutput('deployment_id', deployment.data.id);
 
   deploy-to-vps:
     name: Deploy to VPS
@@ -67,7 +67,7 @@ jobs:
             cd /opt/code-panel-back
             
             # Guardar tag de la imagen actual como previous
-            CURRENT_IMAGE=$(docker inspect --format='{{.Config.Image}}' containers_back 2>/dev/null || echo "none")
+            CURRENT_IMAGE=$(docker inspect --format='{{.Config.Image}}' code-panel-back 2>/dev/null || echo "none")
             if [ "$CURRENT_IMAGE" != "none" ]; then
               docker tag $CURRENT_IMAGE ghcr.io/contenedoresss/code-panel-backend:previous
               echo "previous_tag=$CURRENT_IMAGE" >> $GITHUB_OUTPUT
