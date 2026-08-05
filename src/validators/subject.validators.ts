@@ -1,10 +1,7 @@
 import { z } from "zod";
 
 export const createSubjectSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .max(200, "Name must be 200 characters or less"),
+  name: z.string().min(1, "Name is required").max(200, "Name must be 200 characters or less"),
   imageUrl: z
     .string()
     .url("Invalid URL format")

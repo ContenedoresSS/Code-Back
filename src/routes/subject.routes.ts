@@ -12,7 +12,12 @@ router.use(authenticate);
 router.get("/", subjectController.getAll);
 router.get("/:id", subjectController.getOne);
 router.post("/", rbac([UserRole.Teacher]), validate(createSubjectSchema), subjectController.create);
-router.put("/:id", rbac([UserRole.Teacher]), validate(updateSubjectSchema), subjectController.update);
+router.put(
+  "/:id",
+  rbac([UserRole.Teacher]),
+  validate(updateSubjectSchema),
+  subjectController.update
+);
 router.delete("/:id", rbac([UserRole.Teacher]), subjectController.delete);
 
 export default router;
