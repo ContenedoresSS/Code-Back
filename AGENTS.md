@@ -252,11 +252,62 @@ Tres workflows en GitHub Actions:
 
 ### `cicd_docker.yml`
 - **Disparador**: tag `v*` (ej. `v1.2.3`)
-- **Acción**: build multiplataforma (`linux/amd64`, `linux/arm64`) → push a `ghcr.io/<repo>` con tags `:v1.2.3` y `:latest`
+- **Acción**: 5 jobs segmentados para eficiencia
+  - `lint-format` — verifica formato con Prettier
+  - `typecheck` — compila TypeScript
+  - `tests` — ejecuta tests (depende de typecheck)
+  - `docker-build` — construye imagen multi-arch sin push (depende de tests)
+  - `docker-push` — push a `ghcr.io/<repo>` con tags `:v1.2.3` y `:latest` (depende de docker-build)
+- **Propósito**: construir y publicar la imagen Docker
 
 ### `cd_deploy_on_vps.yml`
-- **Disparador**: se ejecuta automáticamente al completar el workflow de CI
-- **Acción**: SSH al VPS → `cd /opt/code-panel-back` → `docker compose pull && up -d --remove-orphans` → `docker image prune -af`
+- **Disparador**: se ejecuta automáticamente al completar `cicd_docker.yml` exitosamente
+- **Acción**: 5 jobs con healthcheck y rollback automático
+  - `create-deployment` — crea GitHub Deployment con status "pending"
+  - `deploy-to-vps` — SSH al VPS, guarda imagen actual como `previous`, pull nueva imagen, restart
+  - `health-check` — consulta `/health` con retry (3 intentos, 10s entre cada uno)
+  - `rollback` (condicional) — si healthcheck falla, restaura imagen `previous`
+  - `update-deployment` — actualiza GitHub Deployment a "success" o "failure"
+- **Propósito**: desplegar con verificación y rollback automático
+
+### Flujo de deploy completo
+
+```
+PR a main → CI valida (ci_pr.yml) → Review + Merge
+                                          ↓
+                                    main actualizado
+                                          ↓
+                              Líder decide deployar
+                                          ↓
+                              Crear tag v0.0.17
+                                          ↓
+                              cicd_docker.yml (build + push)
+                                          ↓
+                              cd_deploy_on_vps.yml
+                                          ↓
+                              ┌───────────────────────────┐
+                              │ 1. Crear Deployment       │
+                              │ 2. Deploy a VPS           │
+                              │ 3. Health check           │
+                              │ 4. [Rollback si falla]    │
+                              │ 5. Actualizar status      │
+                              └───────────────────────────┘
+```
+
+**Importante**: El deploy NO es automático al mergear a `main`. El líder del proyecto decide cuándo deployar creando un tag versionado.
+
+### Healthcheck endpoint
+
+- **Ruta**: `GET /health`
+- **Rate limit**: 10 req/min por IP
+- **Respuesta**: `{ status: "ok", timestamp: "...", version: "..." }`
+- **Propósito**: smoke test para el pipeline de deploy
+
+### Rollback strategy
+
+- Antes del deploy, la imagen actual se taggea como `previous`
+- Si el healthcheck falla, el job `rollback` restaura la imagen `previous`
+- El GitHub Deployment se marca como "failure" con descripción "rolled back"
 
 ### Flujo de deploy completo
 
