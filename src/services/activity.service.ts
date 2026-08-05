@@ -148,6 +148,18 @@ export class ActivityService implements IActivityService {
         updateData.starterCode = data.starterCode ? (data.starterCode as any) : null;
       }
 
+      if (data.languageId !== undefined) {
+        const language = await prisma.programmingLanguage.findUnique({
+          where: { id: data.languageId },
+        });
+
+        if (!language) {
+          throw new Error("El lenguaje de programación especificado no existe.");
+        }
+
+        updateData.languageId = data.languageId;
+      }
+
       if (Object.keys(updateData).length === 0) {
         return existingActivity;
       }
@@ -159,7 +171,7 @@ export class ActivityService implements IActivityService {
 
       return updatedActivity as ActivityResponse;
     } catch (error: any) {
-      if (error.message.includes("Actividad no encontrada")) {
+      if (error.message.includes("Actividad no encontrada") || error.message.includes("lenguaje")) {
         throw error;
       }
       throw new Error(`Error al actualizar la actividad: ${error.message}`);
