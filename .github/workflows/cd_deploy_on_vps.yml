@@ -2,20 +2,61 @@ name: CD - Deploy to VPS
 
 on:
   workflow_run:
-    workflows: ["CI/CD Docker publish"]
+    workflows: ["CI - Build and Publish"]
     types:
       - completed
 
+permissions:
+  deployments: write
+  contents: read
+
 jobs:
-  deploy-to-vps:
+  create-deployment:
+    name: Create GitHub Deployment
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
+    outputs:
+      deployment_id: ${{ steps.deployment.outputs.deployment_id }}
     steps:
-      - name: Desplegar en VPS vía SSH
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Deployment
+        id: deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: 'production',
+              auto_merge: false,
+              required_contexts: [],
+            });
+            return deployment.data.id;
+
+  deploy-to-vps:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: create-deployment
+    outputs:
+      previous_tag: ${{ steps.save_tag.outputs.previous_tag }}
+    steps:
+      - name: Update Deployment Status to In Progress
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ needs.create-deployment.outputs.deployment_id }},
+              state: 'in_progress',
+              description: 'Deploying to VPS...',
+            });
+
+      - name: Deploy via SSH
+        id: deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -23,6 +64,118 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /opt/code-panel-back
+            
+            # Guardar tag de la imagen actual como previous
+            CURRENT_IMAGE=$(docker inspect --format='{{.Config.Image}}' containers_back 2>/dev/null || echo "none")
+            if [ "$CURRENT_IMAGE" != "none" ]; then
+              docker tag $CURRENT_IMAGE ghcr.io/contenedoresss/code-panel-backend:previous
+              echo "previous_tag=$CURRENT_IMAGE" >> $GITHUB_OUTPUT
+            fi
+            
+            # Pull nueva imagen y restart
             sudo /usr/bin/docker compose pull
             sudo /usr/bin/docker compose up -d --remove-orphans
             sudo /usr/bin/docker image prune -f
+
+      - name: Save previous tag
+        id: save_tag
+        run: echo "previous_tag=${{ steps.deploy.outputs.previous_tag }}" >> $GITHUB_OUTPUT
+
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    needs: [create-deployment, deploy-to-vps]
+    steps:
+      - name: Wait for application to start
+        run: sleep 10
+
+      - name: Check health endpoint
+        id: health
+        run: |
+          MAX_RETRIES=3
+          RETRY_DELAY=10
+          RETRIES=0
+          
+          while [ $RETRIES -lt $MAX_RETRIES ]; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://codepanel.orchfr.duckdns.org/health || echo "000")
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Health check passed!"
+              exit 0
+            fi
+            
+            RETRIES=$((RETRIES + 1))
+            echo "Health check failed (attempt $RETRIES/$MAX_RETRIES). Retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+          done
+          
+          echo "Health check failed after $MAX_RETRIES attempts"
+          exit 1
+
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    needs: [create-deployment, deploy-to-vps, health-check]
+    if: failure() && needs.health-check.result == 'failure'
+    steps:
+      - name: Update Deployment Status to Rolling Back
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ needs.create-deployment.outputs.deployment_id }},
+              state: 'in_progress',
+              description: 'Rolling back to previous version...',
+            });
+
+      - name: Rollback via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/code-panel-back
+            
+            # Verificar que existe imagen previous
+            if docker image inspect ghcr.io/contenedoresss/code-panel-backend:previous >/dev/null 2>&1; then
+              # Detener contenedor actual
+              sudo /usr/bin/docker compose down
+              
+              # Taggear previous como latest
+              docker tag ghcr.io/contenedoresss/code-panel-backend:previous ghcr.io/contenedoresss/code-panel-backend:latest
+              
+              # Reiniciar con imagen anterior
+              sudo /usr/bin/docker compose up -d
+              
+              echo "Rollback completed successfully"
+            else
+              echo "No previous image found for rollback"
+              exit 1
+            fi
+
+  update-deployment:
+    name: Update Deployment Status
+    runs-on: ubuntu-latest
+    needs: [create-deployment, deploy-to-vps, health-check, rollback]
+    if: always()
+    steps:
+      - name: Update Deployment Status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const healthCheckResult = '${{ needs.health-check.result }}';
+            const state = healthCheckResult === 'success' ? 'success' : 'failure';
+            const description = healthCheckResult === 'success' 
+              ? 'Deployment successful' 
+              : 'Deployment failed - rolled back to previous version';
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ needs.create-deployment.outputs.deployment_id }},
+              state: state,
+              description: description,
+            });
