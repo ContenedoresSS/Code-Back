@@ -24,9 +24,7 @@ describe("Integration: Activity Endpoints", () => {
         allowCopy: true,
         allowPaste: true,
         maxAttempts: 3,
-        testCases: [
-          { id: 1, isHidden: false, input: "aW5wdXQ=", expectedOutput: "b3V0cHV0" },
-        ],
+        testCases: [{ id: 1, isHidden: false, input: "aW5wdXQ=", expectedOutput: "b3V0cHV0" }],
       };
 
       mockedActivityService.getWorkspaceForStudent.mockResolvedValue(mockWorkspace);
@@ -166,7 +164,8 @@ describe("Integration: Activity Endpoints", () => {
         });
 
       expect(response.status).toBe(400);
-      expect(response.body.error).toContain("Base64");
+      expect(response.body.error).toBe("Validation failed");
+      expect(response.body.details[0].field).toContain("starterCode");
     });
 
     it("returns 400 when starterCode file missing name", async () => {
@@ -182,6 +181,7 @@ describe("Integration: Activity Endpoints", () => {
         });
 
       expect(response.status).toBe(400);
+      expect(response.body.error).toBe("Validation failed");
     });
 
     it("returns 404 when subject not found", async () => {
@@ -254,6 +254,41 @@ describe("Integration: Activity Endpoints", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.title).toBe("Updated Title");
+    });
+
+    it("updates activity with languageId", async () => {
+      const mockActivity = {
+        id: "1",
+        title: "Hello World",
+        languageId: 2,
+        professorId: "teacher-1",
+      };
+
+      mockedActivityService.updateActivity.mockResolvedValue(mockActivity);
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .put("/api/v1/activity/1")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ languageId: 2 });
+
+      expect(response.status).toBe(200);
+      expect(response.body.languageId).toBe(2);
+    });
+
+    it("returns 404 when language not found", async () => {
+      mockedActivityService.updateActivity.mockRejectedValue(
+        new Error("El lenguaje de programación especificado no existe.")
+      );
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .put("/api/v1/activity/1")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ languageId: 999 });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toContain("lenguaje");
     });
   });
 

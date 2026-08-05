@@ -90,19 +90,12 @@ describe("ActivityService", () => {
 
   describe("getAllActivities", () => {
     it("returns activities for teacher", async () => {
-      const mockActivities = [
-        { id: "1", title: "Activity 1", professorId: "teacher-1" },
-      ];
+      const mockActivities = [{ id: "1", title: "Activity 1", professorId: "teacher-1" }];
       mockPrisma.activity.findMany.mockResolvedValue(mockActivities);
       mockPrisma.activity.count.mockResolvedValue(1);
       mockPrisma.$transaction.mockImplementation(async (queries) => Promise.all(queries));
 
-      const result = await activityService.getAllActivities(
-        "teacher-1",
-        UserRole.Teacher,
-        0,
-        10
-      );
+      const result = await activityService.getAllActivities("teacher-1", UserRole.Teacher, 0, 10);
 
       expect(mockPrisma.activity.findMany).toHaveBeenCalledWith({
         where: { professorId: "teacher-1" },
@@ -135,13 +128,7 @@ describe("ActivityService", () => {
       mockPrisma.activity.count.mockResolvedValue(0);
       mockPrisma.$transaction.mockImplementation(async (queries) => Promise.all(queries));
 
-      await activityService.getAllActivities(
-        "teacher-1",
-        UserRole.Teacher,
-        0,
-        10,
-        5
-      );
+      await activityService.getAllActivities("teacher-1", UserRole.Teacher, 0, 10, 5);
 
       expect(mockPrisma.activity.findMany).toHaveBeenCalledWith({
         where: { professorId: "teacher-1", subjectId: 5 },
@@ -203,6 +190,41 @@ describe("ActivityService", () => {
         data: { title: "New" },
       });
       expect(result).toEqual(updatedActivity);
+    });
+
+    it("updates languageId when language exists", async () => {
+      const existingActivity = { id: "1", title: "Old", professorId: "teacher-1" };
+      const mockLanguage = { id: 2, name: "JavaScript" };
+      const updatedActivity = { id: "1", languageId: 2, professorId: "teacher-1" };
+
+      mockPrisma.activity.findFirst.mockResolvedValue(existingActivity);
+      mockPrisma.programmingLanguage.findUnique.mockResolvedValue(mockLanguage);
+      mockPrisma.activity.update.mockResolvedValue(updatedActivity);
+
+      const result = await activityService.updateActivity("1", UserRole.Teacher, "teacher-1", {
+        languageId: 2,
+      });
+
+      expect(mockPrisma.programmingLanguage.findUnique).toHaveBeenCalledWith({
+        where: { id: 2 },
+      });
+      expect(mockPrisma.activity.update).toHaveBeenCalledWith({
+        where: { id: "1" },
+        data: { languageId: 2 },
+      });
+      expect(result).toEqual(updatedActivity);
+    });
+
+    it("throws error when languageId is invalid", async () => {
+      const existingActivity = { id: "1", title: "Old", professorId: "teacher-1" };
+      mockPrisma.activity.findFirst.mockResolvedValue(existingActivity);
+      mockPrisma.programmingLanguage.findUnique.mockResolvedValue(null);
+
+      await expect(
+        activityService.updateActivity("1", UserRole.Teacher, "teacher-1", {
+          languageId: 999,
+        })
+      ).rejects.toThrow("lenguaje de programaci");
     });
 
     it("throws error when activity not found", async () => {
@@ -284,9 +306,7 @@ describe("ActivityService", () => {
         allowPaste: true,
         maxAttempts: 0,
         language: { id: 1, name: "Python", fileExtension: "py" },
-        testCases: [
-          { id: 1, isHidden: false, input: null, expectedOutput: "b3V0cHV0" },
-        ],
+        testCases: [{ id: 1, isHidden: false, input: null, expectedOutput: "b3V0cHV0" }],
       };
       mockPrisma.activity.findUnique.mockResolvedValue(mockActivity);
 

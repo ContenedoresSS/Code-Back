@@ -1489,6 +1489,9 @@ components:
         description:
           type: [string, "null"]
           description: Descripción detallada
+        languageId:
+          type: integer
+          description: ID del lenguaje de programación
         starterCode:
           type: array
           items:
