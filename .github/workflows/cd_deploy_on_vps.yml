@@ -5,6 +5,7 @@ on:
     workflows: ["CI - Build and Publish"]
     types:
       - completed
+  workflow_dispatch:
 
 permissions:
   deployments: write
@@ -50,7 +51,7 @@ jobs:
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              deployment_id: ${{ needs.create-deployment.outputs.deployment_id }},
+              deployment_id: Number('${{ needs.create-deployment.outputs.deployment_id }}'),
               state: 'in_progress',
               description: 'Deploying to VPS...',
             });
@@ -125,7 +126,7 @@ jobs:
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              deployment_id: ${{ needs.create-deployment.outputs.deployment_id }},
+              deployment_id: Number('${{ needs.create-deployment.outputs.deployment_id }}'),
               state: 'in_progress',
               description: 'Rolling back to previous version...',
             });
@@ -175,7 +176,7 @@ jobs:
             await github.rest.repos.createDeploymentStatus({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              deployment_id: ${{ needs.create-deployment.outputs.deployment_id }},
+              deployment_id: Number('${{ needs.create-deployment.outputs.deployment_id }}'),
               state: state,
               description: description,
             });
