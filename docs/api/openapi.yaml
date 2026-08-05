@@ -40,11 +40,35 @@ tags:
     description: Casos de prueba por actividad (Teacher)
   - name: Submission
     description: Envío y evaluación de soluciones
+  - name: Health
+    description: Health check endpoint para monitoreo
 
 security:
   - bearerAuth: []
 
 paths:
+  # ══════════════════════════════════════════════
+  #  Health Check
+  # ══════════════════════════════════════════════
+  /health:
+    get:
+      operationId: healthCheck
+      tags: [Health]
+      summary: Health check endpoint
+      description: |
+        Smoke test para verificar que la API está funcionando.
+        **Rate‑limited**: 10 peticiones por minuto por IP.
+      security: []
+      responses:
+        "200":
+          description: API está funcionando
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
   # ══════════════════════════════════════════════
   #  Auth
   # ══════════════════════════════════════════════
@@ -925,6 +949,24 @@ components:
         error:
           type: string
           description: Mensaje descriptivo del error
+
+    HealthResponse:
+      title: HealthResponse
+      description: Respuesta del healthcheck
+      type: object
+      properties:
+        status:
+          type: string
+          description: Estado de la API
+          example: ok
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp de la respuesta
+        version:
+          type: string
+          description: Versión de la API
+          example: 1.0.0
 
     CodeFile:
       title: CodeFile
