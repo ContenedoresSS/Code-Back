@@ -263,7 +263,7 @@ Tres workflows en GitHub Actions:
 - **Disparador**: se ejecuta automáticamente al completar `cicd_docker.yml` exitosamente
 - **Acción**: 5 jobs con healthcheck y rollback automático
   - `create-deployment` — crea GitHub Deployment con status "pending"
-  - `deploy-to-vps` — SSH al VPS, guarda imagen actual como `previous`, pull nueva imagen, restart
+  - `deploy-to-vps` — SCP de `compose.prod.yaml` al VPS como `compose.yml`, SSH al VPS, guarda imagen actual como `previous`, pull nueva imagen, restart
   - `health-check` — consulta `/health` con retry (3 intentos, 10s entre cada uno)
   - `rollback` (condicional) — si healthcheck falla, restaura imagen `previous`
   - `update-deployment` — actualiza GitHub Deployment a "success" o "failure"
@@ -308,26 +308,11 @@ PR a main → CI valida (ci_pr.yml) → Review + Merge
 - Si el healthcheck falla, el job `rollback` restaura la imagen `previous`
 - El GitHub Deployment se marca como "failure" con descripción "rolled back"
 
-### Flujo de deploy completo
+### Docker Compose
 
-```
-PR a main → CI valida (ci_pr.yml) → Review + Merge
-                                          ↓
-                                    main actualizado
-                                          ↓
-                              Líder decide deployar
-                                          ↓
-                              Crear tag v0.0.17
-                                          ↓
-                              cicd_docker.yml (build + push)
-                                          ↓
-                              cd_deploy_on_vps.yml (deploy)
-```
+El proyecto tiene dos archivos de compose para diferentes entornos:
 
-**Importante**: El deploy NO es automático al mergear a `main`. El líder del proyecto decide cuándo deployar creando un tag versionado.
-
-### Docker Compose local
-
+**`compose.yaml`** — Desarrollo local
 ```yaml
 services:
   containers_back:
@@ -342,7 +327,83 @@ services:
       - .env
 ```
 
-El contenedor necesita acceso al socket de Docker del host para crear contenedores de ejecución.
+**`compose.prod.yaml`** — Producción (IaC)
+```yaml
+services:
+  db_postgres:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  code-panel-back:
+    image: ghcr.io/contenedoresss/code-panel-backend:latest
+    container_name: code-panel-back
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${PORT:-5555}:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      db_postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    driver: local
+```
+
+El workflow de deploy copia automáticamente `compose.prod.yaml` al VPS como `compose.yml` en cada deploy (IaC).
+
+### Infraestructura del VPS
+
+**Directorio**: `/opt/code-panel-back/`
+- `compose.yml` — Copiado automáticamente desde `compose.prod.yaml` del repo
+- `.env` — Variables de entorno (NO versionado, configurado manualmente)
+
+**Variables de entorno del VPS** (`.env`):
+```bash
+# ── PostgreSQL ──
+POSTGRES_USER=<usuario>
+POSTGRES_PASSWORD=<contraseña>
+POSTGRES_DB=<nombre_base_datos>
+
+# ── Application ──
+PORT=3000
+NODE_ENV=production
+DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db_postgres:5432/${POSTGRES_DB}
+JWT_SECRET=<mínimo 20 caracteres>
+JWT_REFRESH_SECRET=<mínimo 20 caracteres>
+```
+
+**Usuario de deploy**: `deployer`
+- No está en el grupo `docker`
+- Tiene permisos `sudo` limitados (NOPASSWD) a:
+  - `/usr/bin/docker compose pull`
+  - `/usr/bin/docker compose up -d --remove-orphans`
+  - `/usr/bin/docker compose up -d`
+  - `/usr/bin/docker compose down`
+  - `/usr/bin/docker inspect`
+  - `/usr/bin/docker tag`
+  - `/usr/bin/docker image inspect`
+  - `/usr/bin/docker image prune -af`
+  - `/usr/bin/docker image prune -f`
+
+**Deuda técnica**:
+- Puerto 5432 de PostgreSQL expuesto públicamente (idealmente debería ser interno)
 
 ---
 
