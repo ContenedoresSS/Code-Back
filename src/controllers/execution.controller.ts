@@ -13,19 +13,15 @@ class ExecutionController {
       }
 
       if (!isBase64(code)) {
-        return res
-          .status(400)
-          .json({
-            error: "El contenido del código debe estar codificado estrictamente en Base64.",
-          });
+        return res.status(400).json({
+          error: "El contenido del código debe estar codificado estrictamente en Base64.",
+        });
       }
 
       if (stdin && !isBase64(stdin)) {
-        return res
-          .status(400)
-          .json({
-            error: "El contenido de la entrada debe estar codificado estrictamente en Base64.",
-          });
+        return res.status(400).json({
+          error: "El contenido de la entrada debe estar codificado estrictamente en Base64.",
+        });
       }
 
       const output = await ExecutionService.runCode(Number(languageId), code, stdin);
@@ -56,11 +52,9 @@ class ExecutionController {
       }
 
       if (stdin && !isBase64(stdin)) {
-        return res
-          .status(400)
-          .json({
-            error: "El contenido de la entrada debe estar codificado estrictamente en Base64.",
-          });
+        return res.status(400).json({
+          error: "El contenido de la entrada debe estar codificado estrictamente en Base64.",
+        });
       }
 
       for (const file of files) {
