@@ -11,6 +11,7 @@ const router = Router();
 router.use(authenticate);
 router.get("/", subjectController.getAll);
 router.get("/:id", subjectController.getOne);
+router.get("/:id/students", rbac([UserRole.Teacher]), subjectController.getStudents);
 router.post("/", rbac([UserRole.Teacher]), validate(createSubjectSchema), subjectController.create);
 router.put(
   "/:id",
