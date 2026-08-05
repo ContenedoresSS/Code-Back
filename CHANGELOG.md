@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.19-alpha] - 2026-08-05
+
+### Added
+- Enrollment endpoints for student-subject management (inscribirse, listar, desinscribir)
+- GET /subject/:id/students endpoint for teachers to view enrolled students
+- Zod validation for enrollment requests
+- OpenAPI documentation for enrollment endpoints
+- Comprehensive unit and integration tests for enrollment module
+
+## [0.0.18-alpha] - 2026-08-04
+
+### Changed
+- Updated AGENTS.md with IaC and VPS infrastructure documentation
+- Updated .env.example with PostgreSQL variables
+
+### Fixed
+- Deploy permissions and IaC integration in CD workflow
+
+## [0.0.17-alpha] - 2026-07-31
+
+### Added
+- Healthcheck endpoint with rate limit (GET /api/health)
+- Husky hooks for pre-commit formatting (lint-staged + prettier)
+- Commit message validation with commitlint (Conventional Commits)
+- PR validation CI workflow with segmented jobs
+
+### Changed
+- Restructured CI/CD workflows with segmented jobs, healthcheck and rollback
+- Updated CI/CD documentation with optimized workflow details
+- Documented git workflow, branching strategy and conventional commits
+
+### Fixed
+- Deployment ID syntax in deploy workflow (Node 24 compatibility)
+- Formatting issues in execution controller and subject routes
+
+## [0.0.16-alpha] - 2026-07-28
+
+### Fixed
+- Swagger crash in production by switching to dynamic import for swagger config
+
 ## [0.0.15-alpha] - 2026-08-04
 
 ### Added
@@ -133,19 +173,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup
 - First commit
 
-[Unreleased]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.15-alpha...HEAD
-[0.0.15-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.14-alpha...v0.0.15-alpha
-[0.0.14-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.13-alpha...v0.0.14-alpha
-[0.0.13-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.12-alpha...v0.0.13-alpha
-[0.0.12-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.11-alpha...v0.0.12-alpha
-[0.0.11-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.10-alpha...v0.0.11-alpha
-[0.0.10-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.9-alpha...v0.0.10-alpha
-[0.0.9-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.8-alpha...v0.0.9-alpha
-[0.0.8-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.7-alpha...v0.0.8-alpha
-[0.0.7-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.6-alpha...v0.0.7-alpha
-[0.0.6-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.5-alpha...v0.0.6-alpha
-[0.0.5-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.4-alpha...v0.0.5-alpha
-[0.0.4-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.3-alpha...v0.0.4-alpha
-[0.0.3-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.2-alpha...v0.0.3-alpha
-[0.0.2-alpha]: https://github.com/ContenedoresSS/Code-Back/compare/v0.0.1-alpha...v0.0.2-alpha
-[0.0.1-alpha]: https://github.com/ContenedoresSS/Code-Back/releases/tag/v0.0.1-alpha
+[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.19-alpha...HEAD
+[0.0.19-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.18-alpha...v0.0.19-alpha
+[0.0.18-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.17-alpha...v0.0.18-alpha
+[0.0.17-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.16-alpha...v0.0.17-alpha
+[0.0.16-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.15-alpha...v0.0.16-alpha
+[0.0.15-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.14-alpha...v0.0.15-alpha
+[0.0.14-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.13-alpha...v0.0.14-alpha
+[0.0.13-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.12-alpha...v0.0.13-alpha
+[0.0.12-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.11-alpha...v0.0.12-alpha
+[0.0.11-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.10-alpha...v0.0.11-alpha
+[0.0.10-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.9-alpha...v0.0.10-alpha
+[0.0.9-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.8-alpha...v0.0.9-alpha
+[0.0.8-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.7-alpha...v0.0.8-alpha
+[0.0.7-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.6-alpha...v0.0.7-alpha
+[0.0.6-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.5-alpha...v0.0.6-alpha
+[0.0.5-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.4-alpha...v0.0.5-alpha
+[0.0.4-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.3-alpha...v0.0.4-alpha
+[0.0.3-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.2-alpha...v0.0.3-alpha
+[0.0.2-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.1-alpha...v0.0.2-alpha
+[0.0.1-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/releases/tag/v0.0.1-alpha
