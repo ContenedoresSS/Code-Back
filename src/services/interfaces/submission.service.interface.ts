@@ -5,6 +5,7 @@ export interface ISubmissionService {
   processSubmission(
     activityId: string,
     files: CodeFile[],
-    userId?: string
+    userId?: string,
+    requestedLanguageId?: number
   ): Promise<EvaluationResult>;
 }

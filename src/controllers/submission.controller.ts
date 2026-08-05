@@ -19,6 +19,21 @@ class SubmissionController {
 
       const userId = (req as any).user as string | undefined;
 
+      const rawLanguageId: unknown = req.body.languageId;
+      let requestedLanguageId: number | undefined;
+
+      if (rawLanguageId !== undefined && rawLanguageId !== null) {
+        const parsed = Number(rawLanguageId);
+
+        if (!Number.isInteger(parsed) || parsed <= 0) {
+          return res.status(400).json({
+            error: "El campo 'languageId' debe ser un entero positivo.",
+          });
+        }
+
+        requestedLanguageId = parsed;
+      }
+
       for (const file of files) {
         if (!file.name || !file.content) {
           return res.status(400).json({ error: "Cada archivo debe incluir 'name' y 'content'." });
@@ -30,7 +45,12 @@ class SubmissionController {
         }
       }
 
-      const result = await submissionService.processSubmission(activityId, files, userId);
+      const result = await submissionService.processSubmission(
+        activityId,
+        files,
+        userId,
+        requestedLanguageId
+      );
 
       return res.status(200).json(result);
     } catch (error: any) {
@@ -38,7 +58,7 @@ class SubmissionController {
         return res.status(404).json({ error: error.message });
       }
 
-      if (error.message.includes("límite máximo")) {
+      if (error.message.includes("límite máximo") || error.message.includes("no permite")) {
         return res.status(403).json({ error: error.message });
       }
 

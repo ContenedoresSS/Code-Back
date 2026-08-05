@@ -64,6 +64,73 @@ describe("Integration: Submission Endpoints", () => {
       expect(response.body.status).toBe(SubmissionStatus.ACCEPTED);
     });
 
+    it("forwards the requested languageId to the service", async () => {
+      mockedSubmissionService.processSubmission.mockResolvedValue({
+        status: SubmissionStatus.ACCEPTED,
+        finalGrade: 100,
+        passedTests: 1,
+        totalTests: 1,
+        executionTimeMs: 100,
+        compilerOutput: null,
+        languageId: 7,
+      });
+
+      const files = [{ name: "main.java", content: "cHJpbnQoJ0hlbGxvJyk=" }];
+      const token = generateStudentToken("student-1");
+      const response = await request(app)
+        .post("/api/v1/activity/1/submit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ files, languageId: 7 });
+
+      expect(response.status).toBe(200);
+      expect(mockedSubmissionService.processSubmission).toHaveBeenCalledWith(
+        "1",
+        files,
+        "student-1",
+        7
+      );
+    });
+
+    it("returns 400 when languageId is not a positive integer", async () => {
+      const token = generateStudentToken();
+      const response = await request(app)
+        .post("/api/v1/activity/1/submit")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          files: [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }],
+          languageId: "java",
+        });
+
+      expect(response.status).toBe(400);
+      expect(mockedSubmissionService.processSubmission).not.toHaveBeenCalled();
+    });
+
+    it("returns 403 when the activity forbids editing the starter code", async () => {
+      mockedSubmissionService.processSubmission.mockRejectedValue(
+        new Error("Esta actividad no permite modificar el código inicial.")
+      );
+
+      const response = await request(app)
+        .post("/api/v1/activity/1/submit")
+        .send({ files: [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }] });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toContain("no permite modificar");
+    });
+
+    it("returns 403 when the activity forbids adding files", async () => {
+      mockedSubmissionService.processSubmission.mockRejectedValue(
+        new Error("Esta actividad no permite agregar ni quitar archivos.")
+      );
+
+      const response = await request(app)
+        .post("/api/v1/activity/1/submit")
+        .send({ files: [{ name: "extra.py", content: "cHJpbnQoJ0hlbGxvJyk=" }] });
+
+      expect(response.status).toBe(403);
+      expect(response.body.error).toContain("no permite agregar");
+    });
+
     it("returns 400 when files field is missing", async () => {
       const token = generateStudentToken();
       const response = await request(app)
