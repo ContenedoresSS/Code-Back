@@ -385,6 +385,42 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
   3. Hacer que el repositorio sea la fuente única de verdad para la configuración de despliegue.
   4. Documentar el proceso de sincronización del compose al VPS.
 
+### DEBT‑30: El rollback automático del deploy no funciona — la imagen `:previous` nunca se crea
+
+- **Archivos**: `.github/workflows/cd_deploy_on_vps.yml:88-93` (creación del tag), `:154-178` (job de rollback), `:180-203` (reporte de estado); configuración de `sudoers` del usuario `deployer` en el VPS.
+- **Problema**: El rollback está escrito pero **nunca puede ejecutarse**, porque la imagen `ghcr.io/contenedoresss/code-panel-backend:previous` no se crea en ningún deploy.
+
+  **Causa raíz — el allowlist de `sudo` deniega los comandos con argumentos.** Según `sudoers(5)`, si una entrada de comando incluye argumentos, el usuario solo puede ejecutarlo con **exactamente esos** argumentos; si no incluye ninguno, puede usar cualquiera. Las entradas NOPASSWD del usuario `deployer` son `/usr/bin/docker inspect`, `/usr/bin/docker tag` y `/usr/bin/docker image inspect` — todas con argumentos —, así que cualquier invocación con argumentos adicionales queda denegada:
+
+  ```bash
+  # Línea 89 — denegado por sudo (lleva --format y el nombre del contenedor)
+  CURRENT_IMAGE=$(sudo /usr/bin/docker inspect --format='{{.Config.Image}}' code-panel-back 2>/dev/null || echo "none")
+  ```
+
+  El `2>/dev/null || echo "none"` **silencia el error de permisos**, `CURRENT_IMAGE` queda en `"none"`, el `if` de la línea 90 no entra y el `docker tag ... :previous` de la línea 91 nunca corre. En el job de rollback pasa lo mismo con `sudo /usr/bin/docker image inspect ...:previous` (línea 164): se deniega, el `>/dev/null 2>&1` lo oculta, cae al `else` y termina en `exit 1` con *"No previous image found for rollback"*.
+
+  Por contraste, el deploy sí funciona porque `compose pull` y `compose up -d --remove-orphans` coinciden **exactamente** con sus entradas del allowlist.
+
+  **Defectos secundarios del mismo job**, que hay que corregir junto con el anterior:
+
+  1. **`$GITHUB_OUTPUT` no existe en el VPS** (línea 92): ese `echo` corre en la sesión SSH remota, donde la variable no está definida → `ambiguous redirect`. El output `previous_tag` del step y del job (líneas 45, 100-102) queda **siempre vacío**.
+  2. **El estado del Deployment miente** (líneas 190-194): `update-deployment` decide el mensaje mirando solo `needs.health-check.result` y reporta *"rolled back to previous version"* aunque el job `rollback` haya sido *skipped* o haya fallado. Nunca consulta `needs.rollback.result`.
+  3. **El rollback tumba la base de datos** (línea 166): usa `docker compose down`, que baja todo el stack incluido `db_postgres`, en lugar de recrear solo el servicio de la app.
+  4. **`:previous` es un tag móvil, no un digest** (línea 169): el rollback re-taggea `previous` → `latest` en local, así que el siguiente `docker compose pull` vuelve a traer la imagen defectuosa y deshace la reversión.
+  5. **No hay verificación post-rollback**: nadie vuelve a consultar `/api/health` después de revertir, así que un rollback fallido se reporta igual que uno exitoso.
+  6. **No hay rollback de migraciones**: si el deploy aplicó una migración de Prisma, volver a la imagen anterior deja el esquema adelantado respecto al código.
+
+- **Impacto**: **Producción no tiene red de seguridad.** Un deploy que rompe el healthcheck deja la aplicación caída y requiere intervención manual por SSH, mientras el Deployment de GitHub muestra que se hizo rollback. El fallo es silencioso: los tres deploys más recientes reportaron éxito sin que `:previous` existiera nunca.
+- **Recomendación**:
+  1. **Arreglar el allowlist de `sudo`** para permitir argumentos en los subcomandos necesarios (ej. `/usr/bin/docker inspect *`, `/usr/bin/docker tag *`, `/usr/bin/docker image inspect *`), o mejor: mover toda la secuencia de deploy a un **script propiedad de root** en el VPS y dar una sola entrada NOPASSWD para ese script. Mantener a `deployer` fuera del grupo `docker`.
+  2. **Dejar de silenciar errores** en el script SSH: quitar `2>/dev/null` de la detección de imagen y usar `script_stop: true` en `appleboy/ssh-action`, para que un fallo de permisos rompa el deploy en vez de degradarlo en silencio.
+  3. **Fijar la versión anterior por digest**, no por tag móvil: guardar `{{.Image}}` (el sha256) en lugar de `{{.Config.Image}}` y revertir a ese digest.
+  4. **Devolver el digest anterior al runner** por un canal válido (que el step SSH lo imprima en stdout y capturarlo desde la salida, no escribiendo a `$GITHUB_OUTPUT` en el host remoto).
+  5. **Reportar el estado real**: que `update-deployment` considere `needs.rollback.result` y distinga entre *desplegado*, *revertido* y *caído sin revertir*.
+  6. **Revertir solo el servicio de la app**: `docker compose up -d --no-deps --force-recreate code-panel-back` en vez de `compose down`.
+  7. **Verificar el healthcheck después del rollback** y fallar el workflow si tampoco responde.
+  8. **Probar el rollback deliberadamente** en un deploy de prueba (ej. una imagen que falle a propósito) antes de darlo por funcional. Nunca se ha ejercitado.
+
 ---
 
 ## Pilar 13 — Gestión de archivos y medios
@@ -416,6 +452,7 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 | **Alta** | 06, 07 | Error handling | AppError + middleware global |
 | **Alta** | 04, 05 | DI + acoplamiento | tsyringe, desacoplar servicios |
 | **Alta** | 11 | Tipos `any` | Arreglar express.d.ts y eliminar casteos |
+| **Alta** | 30 | CI/CD | Rollback roto: arreglar sudoers y fijar digest anterior |
 | **Media** | 12, 13, 14, 15 | Consistencia | Uniformizar estilos, limpiar código muerto |
 | **Media** | 16, 17 | Observabilidad | pino, health check |
 | **Media** | 19, 21 | BD + auth | Índices, rate limit en login |
