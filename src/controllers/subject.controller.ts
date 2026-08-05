@@ -101,6 +101,37 @@ class SubjectController {
       return res.status(400).json({ error: error.message });
     }
   }
+
+  public async getStudents(req: Request, res: Response) {
+    try {
+      const subjectId = parseIdParam(req.params.id);
+      const userId = req.user as string;
+
+      if (isNaN(subjectId)) {
+        return res.status(400).json({ error: "El ID proporcionado no es válido." });
+      }
+
+      const { skip, take } = getPaginationParams(req);
+
+      const searchParam = req.query.search;
+      const searchTerm = typeof searchParam === "string" ? searchParam.trim() : undefined;
+
+      const paginatedStudents = await subjectService.getStudentsBySubject(
+        subjectId,
+        userId,
+        skip,
+        take,
+        searchTerm
+      );
+
+      return res.status(200).json(paginatedStudents);
+    } catch (error: any) {
+      if (error.message.includes("Materia no encontrada")) {
+        return res.status(404).json({ error: error.message });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 export default new SubjectController();

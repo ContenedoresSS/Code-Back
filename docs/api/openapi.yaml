@@ -40,6 +40,8 @@ tags:
     description: Casos de prueba por actividad (Teacher)
   - name: Submission
     description: Envío y evaluación de soluciones
+  - name: Enrollment
+    description: Inscripciones de estudiantes a materias
   - name: Health
     description: Health check endpoint para monitoreo
 
@@ -607,6 +609,129 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /subject/{id}/students:
+    parameters:
+      - $ref: "#/components/parameters/SubjectId"
+    get:
+      operationId: subjectGetStudents
+      tags: [Subject]
+      summary: Listar alumnos inscritos en una materia
+      description: |
+        Devuelve la lista paginada de estudiantes inscritos en la materia.
+        Solo el profesor propietario de la materia (o God) puede acceder.
+      parameters:
+        - $ref: "#/components/parameters/Skip"
+        - $ref: "#/components/parameters/Take"
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Filtrar por nombre, apellido o email (case‑insensitive)
+      responses:
+        "200":
+          description: Lista paginada de alumnos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedEnrolledStudents"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ══════════════════════════════════════════════
+  #  Enrollment
+  # ══════════════════════════════════════════════
+  /enrollment:
+    post:
+      operationId: enrollmentCreate
+      tags: [Enrollment]
+      summary: Inscribirse a una materia
+      description: |
+        Permite a un estudiante inscribirse en una materia.
+        Solo estudiantes (y God) pueden usar este endpoint.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEnrollmentRequest"
+      responses:
+        "201":
+          description: Inscripción creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: El estudiante ya está inscrito en esta materia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      operationId: enrollmentList
+      tags: [Enrollment]
+      summary: Listar inscripciones
+      description: |
+        - **Student**: ve sus propias inscripciones.
+        - **Teacher**: ve los alumnos inscritos en sus materias.
+        - **God**: ve todas las inscripciones.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Skip"
+        - $ref: "#/components/parameters/Take"
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: |
+            Student: filtra por nombre de materia.
+            Teacher/God: filtra por nombre, apellido o email del estudiante.
+      responses:
+        "200":
+          description: Lista paginada de inscripciones
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedEnrollments"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /enrollment/{id}:
+    parameters:
+      - $ref: "#/components/parameters/EnrollmentId"
+    delete:
+      operationId: enrollmentDelete
+      tags: [Enrollment]
+      summary: Desinscribir de una materia
+      description: |
+        - **Student**: solo puede eliminarse a sí mismo.
+        - **Teacher**: puede remover alumnos de sus propias materias.
+        - **God**: puede eliminar cualquier inscripción.
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Inscripción eliminada
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # ══════════════════════════════════════════════
   #  Activity
   # ══════════════════════════════════════════════
@@ -910,6 +1035,14 @@ components:
       schema:
         type: integer
       description: ID del caso de prueba
+    EnrollmentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: UUID de la inscripción
     Skip:
       name: skip
       in: query
@@ -1433,6 +1566,111 @@ components:
           description: Arreglo de materias
           items:
             $ref: "#/components/schemas/Subject"
+        totalCount:
+          type: integer
+          description: Total de registros disponibles
+
+    # ── Enrollment ──
+    CreateEnrollmentRequest:
+      title: CreateEnrollmentRequest
+      description: Datos para inscribirse a una materia
+      type: object
+      required: [subjectId]
+      properties:
+        subjectId:
+          type: integer
+          description: ID de la materia a la que se desea inscribir
+          example: 1
+
+    Enrollment:
+      title: Enrollment
+      description: Inscripción de un estudiante a una materia
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único de la inscripción
+        studentId:
+          type: string
+          format: uuid
+          description: ID del estudiante
+        subjectId:
+          type: integer
+          description: ID de la materia
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de inscripción
+        student:
+          type: object
+          description: Datos del estudiante (solo para Teacher/God)
+          properties:
+            name:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+        subject:
+          type: object
+          description: Datos de la materia (solo para Student)
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+
+    PaginatedEnrollments:
+      title: PaginatedEnrollments
+      description: Lista paginada de inscripciones
+      type: object
+      properties:
+        data:
+          type: array
+          description: Arreglo de inscripciones
+          items:
+            $ref: "#/components/schemas/Enrollment"
+        totalCount:
+          type: integer
+          description: Total de registros disponibles
+
+    EnrolledStudent:
+      title: EnrolledStudent
+      description: Estudiante inscrito en una materia
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID del estudiante
+        name:
+          type: string
+          description: Nombre del estudiante
+        lastName:
+          type: string
+          description: Apellido del estudiante
+        email:
+          type: string
+          description: Email del estudiante
+        identifier:
+          type: [string, "null"]
+          description: Identificador único (matrícula)
+        enrolledAt:
+          type: string
+          format: date-time
+          description: Fecha de inscripción
+
+    PaginatedEnrolledStudents:
+      title: PaginatedEnrolledStudents
+      description: Lista paginada de estudiantes inscritos
+      type: object
+      properties:
+        data:
+          type: array
+          description: Arreglo de estudiantes inscritos
+          items:
+            $ref: "#/components/schemas/EnrolledStudent"
         totalCount:
           type: integer
           description: Total de registros disponibles

@@ -3,6 +3,7 @@ import type { ISubjectService } from "./interfaces/subject.service.interface.js"
 import type { CreateSubjectRequest } from "../types/requests/create-subject-request.model.js";
 import type { UpdateSubjectRequest } from "../types/requests/update-subject-request.model.js";
 import type { SubjectResponse } from "../types/responses/subject-reponse.model.js";
+import type { EnrolledStudentResponse } from "../types/responses/enrolled-student-response.model.js";
 import type { PaginationData } from "../types/shared/pagination-data.shared.js";
 import { UserRole } from "../types/enums/role.enum.js";
 
@@ -134,6 +135,72 @@ export class SubjectService implements ISubjectService {
         throw error;
       }
       throw new Error(`Error al eliminar el curso: ${error.message}`);
+    }
+  }
+
+  public async getStudentsBySubject(
+    subjectId: number,
+    userId: string,
+    skip: number = 0,
+    take: number = 10,
+    searchTerm?: string
+  ): Promise<PaginationData<EnrolledStudentResponse>> {
+    try {
+      await this.getSubjectById(subjectId, userId);
+
+      const enrollmentWhere: any = { subjectId };
+
+      if (searchTerm) {
+        enrollmentWhere.student = {
+          OR: [
+            { name: { contains: searchTerm, mode: "insensitive" } },
+            { lastName: { contains: searchTerm, mode: "insensitive" } },
+            { email: { contains: searchTerm, mode: "insensitive" } },
+          ],
+        };
+      }
+
+      const [enrollments, totalCount] = await prisma.$transaction([
+        prisma.enrollment.findMany({
+          where: enrollmentWhere,
+          skip,
+          take,
+          orderBy: { createdAt: "desc" },
+          include: {
+            student: {
+              select: {
+                id: true,
+                name: true,
+                lastName: true,
+                email: true,
+                identifier: true,
+              },
+            },
+          },
+        }),
+        prisma.enrollment.count({
+          where: enrollmentWhere,
+        }),
+      ]);
+
+      const students: EnrolledStudentResponse[] = enrollments.map((e) => ({
+        id: e.student.id,
+        name: e.student.name,
+        lastName: e.student.lastName,
+        email: e.student.email,
+        identifier: e.student.identifier,
+        enrolledAt: e.createdAt.toISOString(),
+      }));
+
+      return {
+        data: students,
+        totalCount,
+      };
+    } catch (error: any) {
+      if (error.message.includes("Materia no encontrada")) {
+        throw error;
+      }
+      throw new Error(`Error al listar alumnos: ${error.message}`);
     }
   }
 }

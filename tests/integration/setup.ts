@@ -48,6 +48,14 @@ const { mockPrisma } = vi.hoisted(() => ({
       count: vi.fn(),
       create: vi.fn(),
     },
+    enrollment: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
+    },
     programmingLanguage: {
       findUnique: vi.fn(),
     },

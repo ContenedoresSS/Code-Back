@@ -2,6 +2,7 @@ import type { UserRole } from "../../types/enums/role.enum.js";
 import type { CreateSubjectRequest } from "../../types/requests/create-subject-request.model.js";
 import type { UpdateSubjectRequest } from "../../types/requests/update-subject-request.model.js";
 import type { SubjectResponse } from "../../types/responses/subject-reponse.model.js";
+import type { EnrolledStudentResponse } from "../../types/responses/enrolled-student-response.model.js";
 import type { PaginationData } from "../../types/shared/pagination-data.shared.js";
 
 export interface ISubjectService {
@@ -39,4 +40,15 @@ export interface ISubjectService {
    * Elimina un curso verificando su pertenencia.
    */
   deleteSubject(subjectId: number, userId: string): Promise<void>;
+
+  /**
+   * Obtiene la lista paginada de alumnos inscritos en una materia.
+   */
+  getStudentsBySubject(
+    subjectId: number,
+    userId: string,
+    skip: number,
+    take: number,
+    searchTerm?: string
+  ): Promise<PaginationData<EnrolledStudentResponse>>;
 }
