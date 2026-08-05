@@ -252,10 +252,9 @@ Tres workflows en GitHub Actions:
 
 ### `cicd_docker.yml`
 - **Disparador**: tag `v*` (ej. `v1.2.3`)
-- **Acción**: 5 jobs segmentados para eficiencia
-  - `lint-format` — verifica formato con Prettier
-  - `typecheck` — compila TypeScript
-  - `tests` — ejecuta tests (depende de typecheck)
+- **Acción**: 4 jobs segmentados para eficiencia
+  - `lint-and-typecheck` — verifica formato con Prettier y compila TypeScript
+  - `tests` — ejecuta tests (depende de lint-and-typecheck)
   - `docker-build` — construye imagen multi-arch sin push (depende de tests)
   - `docker-push` — push a `ghcr.io/<repo>` con tags `:v1.2.3` y `:latest` (depende de docker-build)
 - **Propósito**: construir y publicar la imagen Docker
