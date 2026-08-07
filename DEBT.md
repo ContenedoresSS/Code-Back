@@ -318,11 +318,15 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 - **Impacto**: Difícil predecir dónde está un tipo. La carpeta `dtos` es redundante con `requests`.
 - **Recomendación**: Unificar en una sola convención. O todo bajo `requests/` y `responses/`, o migrar a feature-folders (`src/modules/auth/`, `src/modules/activity/`, etc.).
 
-### DEBT‑23: Variables de CORS hardcodeadas
+### ~~DEBT‑23: Variables de CORS hardcodeadas~~ ✅ RESUELTO
 
-- **Archivos**: `src/app.ts:10-16`
-- **Problema**: Los orígenes permitidos están hardcodeados. Si cambia el dominio del frontend, hay que modificar código y redeploy.
-- **Recomendación**: `CORS_ORIGINS="http://localhost:5173,https://codepanel.orchfr.duckdns.org"` en `.env` y parsearlo en `env.config.ts`.
+- **Resuelto en**: feat/cors-from-env
+- **Solución implementada**:
+  - Variable de entorno `CORS_ORIGINS` (opcional, separada por comas) en `env.config.ts`
+  - Función `parseCorsOrigins` con trimming de espacios y filtrado de vacíos
+  - Fallback a los defaults actuales si no se provee la variable (retrocompatibilidad)
+  - `src/app.ts` consume `ENV.corsOrigins` en lugar del array hardcodeado
+  - Documentado en `.env.example`, `.env.prod.example` y `DEPLOY.md`
 
 ---
 

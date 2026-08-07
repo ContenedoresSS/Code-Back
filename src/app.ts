@@ -7,11 +7,7 @@ import v1Routes from "./routes/index-v1.routes.js";
 
 const PORT = ENV.PORT;
 
-const whiteList = [
-  "http://localhost:5173",
-  "http://localhost:8080",
-  "https://codepanel.orchfr.duckdns.org",
-];
+const whiteList = ENV.corsOrigins;
 
 export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {

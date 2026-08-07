@@ -115,6 +115,9 @@ POSTGRES_DB=<nombre-base-de-datos>
 POSTGRES_PORT=5432
 DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db_postgres:5432/${POSTGRES_DB}"
 
+# ── CORS ──
+CORS_ORIGINS="http://localhost:5173,https://codepanel.orchfr.duckdns.org"
+
 # ── JWT ──
 JWT_SECRET=<mínimo-20-caracteres>
 JWT_REFRESH_SECRET=<mínimo-20-caracteres>
