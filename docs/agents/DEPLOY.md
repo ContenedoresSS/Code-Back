@@ -397,7 +397,7 @@ Los logs aparecen en la pestaña **Actions** del repositorio.
 
 ## 8. Proceso de versionamiento y CHANGELOG
 
-> El **procedimiento normativo** del ciclo de release está en `AGENTS.md` §16, incluidas las verificaciones previas, el punto de aprobación del líder y las advertencias sobre migraciones y rollback. Esta sección cubre el detalle operativo del versionamiento y el CHANGELOG.
+> El **procedimiento normativo** del ciclo de release está en `docs/agents/10-release-cycle.md`, incluidas las verificaciones previas, el punto de aprobación del líder y las advertencias sobre migraciones y rollback. Esta sección cubre el detalle operativo del versionamiento y el CHANGELOG.
 
 ### 8.1 Versionamiento SemVer
 
@@ -440,7 +440,7 @@ v0.0.14-alpha
    - CD (`cd_deploy_on_vps.yml`): SCP del compose → SSH al VPS → `docker compose pull && up -d` → health check
 7. **Verificar el resultado**: los dos runs en verde, el Deployment en `success` y `/api/health` respondiendo `200`.
 
-> ⚠️ El pipeline **no aplica migraciones de Prisma** (ver sección 5.5) y el **rollback automático no funciona** (`DEBT.md` DEBT‑30). Si el health check falla, asume que la app quedó caída y revierte manualmente con la sección 9, usando el tag inmutable de la versión anterior.
+> ⚠️ El pipeline **no aplica migraciones de Prisma** (ver sección 5.5) y el **rollback automático no funciona** (`docs/agents/DEBT.md` DEBT‑30). Si el health check falla, asume que la app quedó caída y revierte manualmente con la sección 9, usando el tag inmutable de la versión anterior.
 
 ### 8.3 Mantener el CHANGELOG
 
@@ -520,7 +520,7 @@ git push origin v0.0.20-alpha
 curl -s https://codepanel.orchfr.duckdns.org/api/health
 ```
 
-El CI/CD se ejecutará automáticamente y desplegará la nueva versión. **Verifica siempre** los dos runs de Actions, el estado del Deployment y el health check: el rollback automático no es confiable (`DEBT.md` DEBT‑30).
+El CI/CD se ejecutará automáticamente y desplegará la nueva versión. **Verifica siempre** los dos runs de Actions, el estado del Deployment y el health check: el rollback automático no es confiable (`docs/agents/DEBT.md` DEBT‑30).
 
 ---
 

@@ -295,8 +295,8 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 
 ### DEBT‑20: Rate limit desalineado con lo documentado
 
-- **Archivos**: `src/middlewares/rateLimiter.middleware.ts:4`, `AGENTS.md:182`
-- **Problema**: El código permite **10** ejecuciones cada 5 minutos. El AGENTS.md documenta **2**. La diferencia es 5x.
+- **Archivos**: `src/middlewares/rateLimiter.middleware.ts:4`, `docs/agents/01-project-overview.md`
+- **Problema**: El código permite **10** ejecuciones cada 5 minutos. La documentación del proyecto especifica **2**. La diferencia es 5x.
 - **Impacto**: Si 2 es el requisito académico real, se está permitiendo 5 veces más tráfico del debido, exponiendo el VPS.
 - **Recomendación**: Cambiar `max: 10` a `max: 2` para alinearse con el requisito de negocio documentado.
 
