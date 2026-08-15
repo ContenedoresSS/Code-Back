@@ -4,6 +4,7 @@ import type { CorsOptions } from "cors";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import v1Routes from "./routes/index-v1.routes.js";
+import { payloadTooLargeErrorHandler } from "./middlewares/body-size-error.middleware.js";
 
 const PORT = ENV.PORT;
 
@@ -23,7 +24,7 @@ export const corsOptions: CorsOptions = {
 
 const app = express();
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: ENV.MAX_REQUEST_BODY }));
 
 const healthLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -41,6 +42,8 @@ app.get("/api/health", healthLimiter, (_req, res) => {
 });
 
 app.use("/api/v1", v1Routes);
+
+app.use(payloadTooLargeErrorHandler);
 
 if (ENV.NODE_ENV === "development") {
   const { swaggerUiHandler, swaggerUiSetup, swaggerSpec } = await import("./config/swagger.js");

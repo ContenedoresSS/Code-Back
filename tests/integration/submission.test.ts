@@ -228,5 +228,29 @@ describe("Integration: Submission Endpoints", () => {
 
       expect(response.status).toBe(403);
     });
+
+    it("rejects oversized file content with 400", async () => {
+      const oversized = Buffer.alloc(300 * 1024, "x").toString("base64");
+
+      const response = await request(app)
+        .post("/api/v1/activity/1/submit")
+        .send({
+          files: [{ name: "main.py", content: oversized }],
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    it("rejects requests larger than the global body limit with 413", async () => {
+      const big = Buffer.alloc(1_200_000, "x").toString("base64");
+
+      const response = await request(app)
+        .post("/api/v1/activity/1/submit")
+        .send({
+          files: [{ name: "main.py", content: big }],
+        });
+
+      expect(response.status).toBe(413);
+    });
   });
 });

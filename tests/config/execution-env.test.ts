@@ -11,6 +11,9 @@ vi.hoisted(() => {
     "EXECUTION_NO_NEW_PRIVILEGES",
     "EXECUTION_MAX_CONCURRENCY",
     "EXECUTION_QUEUE_TIMEOUT_MS",
+    "MAX_REQUEST_BODY",
+    "EXECUTION_MAX_CODE_BYTES",
+    "EXECUTION_MAX_STDIN_BYTES",
   ]) {
     delete process.env[key];
   }
@@ -53,5 +56,17 @@ describe("execution sandbox env defaults", () => {
 
   it("defaults queue timeout to 30000 ms", () => {
     expect(ENV.EXECUTION_QUEUE_TIMEOUT_MS).toBe(30000);
+  });
+
+  it("defaults request body limit to 1mb", () => {
+    expect(ENV.MAX_REQUEST_BODY).toBe("1mb");
+  });
+
+  it("defaults code size limit to 256 KB", () => {
+    expect(ENV.EXECUTION_MAX_CODE_BYTES).toBe(262144);
+  });
+
+  it("defaults stdin size limit to 64 KB", () => {
+    expect(ENV.EXECUTION_MAX_STDIN_BYTES).toBe(65536);
   });
 });

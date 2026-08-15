@@ -3,6 +3,13 @@ import type { RunCodeWithFilesBody } from "../types/requests/run-code-with-files
 import ExecutionService from "../services/execution.service.js";
 import { isBase64 } from "../helpers/base64-validator.helper.js";
 import { QueueTimeoutError } from "../helpers/concurrency-limiter.helper.js";
+import { validateExecutionInputSize } from "../helpers/execution-size.helper.js";
+import { ENV } from "../config/env.config.js";
+
+const sizeLimits = {
+  maxCodeBytes: ENV.EXECUTION_MAX_CODE_BYTES,
+  maxStdinBytes: ENV.EXECUTION_MAX_STDIN_BYTES,
+};
 
 class ExecutionController {
   async run(req: Request, res: Response): Promise<Response> {
@@ -23,6 +30,11 @@ class ExecutionController {
         return res.status(400).json({
           error: "El contenido de la entrada debe estar codificado estrictamente en Base64.",
         });
+      }
+
+      const sizeError = validateExecutionInputSize({ code, stdin }, sizeLimits);
+      if (sizeError) {
+        return res.status(400).json({ error: sizeError });
       }
 
       const output = await ExecutionService.runCode(Number(languageId), code, stdin);
@@ -70,6 +82,11 @@ class ExecutionController {
             error: `El contenido del archivo '${file.name}' debe estar codificado estrictamente en Base64.`,
           });
         }
+      }
+
+      const sizeError = validateExecutionInputSize({ files, stdin }, sizeLimits);
+      if (sizeError) {
+        return res.status(400).json({ error: sizeError });
       }
 
       const output = await ExecutionService.runCodeWithFiles(languageId, files, entryPoint, stdin);

@@ -44,13 +44,16 @@ Análisis ordenado por pilares críticos del negocio, del más al menos priorita
 
 ### DEBT‑03: Sin validación de tamaño de entrada
 
-- **Archivos**: `src/controllers/execution.controller.ts:14-18`, `src/controllers/submission.controller.ts:14-16`
+- **Archivos**: `src/app.ts`, `src/controllers/execution.controller.ts`, `src/controllers/submission.controller.ts`, `src/helpers/base64-size.helper.ts`, `src/helpers/execution-size.helper.ts`, `src/middlewares/body-size-error.middleware.ts`
 - **Problema**: No hay límite en el tamaño de `code`, `stdin`, o `files`. Un atacante puede enviar archivos gigantes (varios GB en Base64) que saturan memoria y disco.
 - **Impacto**: DoS por agotamiento de memoria del proceso Node. Posible llenado del disco del VPS con tars enormes.
 - **Recomendación**:
-  1. Limitar `express.json()` con `limit: '1mb'`.
-  2. Validar tamaño máximo de cada `file.content` (decodificado) antes de procesarlo.
-  3. Validar `stdin` a máximo 64 KB decodificado.
+  1. ~~Limitar `express.json()` con `limit: '1mb'`.~~ ✅ **RESUELTO** con `MAX_REQUEST_BODY` (default `"1mb"`) en `app.ts`, y mini-handler que responde **413 JSON** (`body-size-error.middleware.ts`).
+  2. ~~Validar tamaño máximo de cada `file.content` (decodificado) antes de procesarlo.~~ ✅ **RESUELTO** con `EXECUTION_MAX_CODE_BYTES` (default `262144` = 256 KB) vía `validateExecutionInputSize`.
+  3. ~~Validar `stdin` a máximo 64 KB decodificado.~~ ✅ **RESUELTO** con `EXECUTION_MAX_STDIN_BYTES` (default `65536`) vía `validateExecutionInputSize`.
+- **Detalle**: el tamaño decodificado se calcula aritméticamente (`decodedBase64Size`, sin decodificar) para no reintroducir el DoS al alocar `Buffer` gigantes. Violaciones por-campo → **400**; body global excedido → **413**.
+- **Resuelto en**: `feat/execution-input-size-limit`
+- **Residual**: el `starterCode` de las actividades queda protegido solo por el límite global (1mb), sin tope por-campo.
 
 ---
 
@@ -466,7 +469,7 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 
 | Prioridad | DEBTs | Pilar | Acción sugerida |
 |-----------|-------|-------|-----------------|
-| **Crítica** | 01 ✅, 02 ✅, 03 | Sandbox | Corregir fugas de contenedores y DoS |
+| **Crítica** | 01 ✅, 02 ✅, 03 ✅ | Sandbox | Corregir fugas de contenedores y DoS |
 | **Alta** | 31 | Sandbox | Reconciliación externa de contenedores huérfanos (residual de DEBT‑01) |
 | **Alta** | 08, 09, 20 | Validación + Rate limit | Zod schemas y corregir límite a 2 |
 | **Alta** | 06, 07 | Error handling | AppError + middleware global |
