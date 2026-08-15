@@ -10,6 +10,10 @@ const { mockPrisma } = vi.hoisted(() => ({
       delete: vi.fn(),
       count: vi.fn(),
     },
+    enrollment: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
@@ -77,9 +81,9 @@ describe("SubjectService", () => {
     it("throws error when database operation fails", async () => {
       mockPrisma.subject.create.mockRejectedValue(new Error("DB error"));
 
-      await expect(
-        subjectService.createSubject("teacher-1", { name: "Math" })
-      ).rejects.toThrow("Error al crear el curso: DB error");
+      await expect(subjectService.createSubject("teacher-1", { name: "Math" })).rejects.toThrow(
+        "Error al crear el curso: DB error"
+      );
     });
   });
 
@@ -95,12 +99,7 @@ describe("SubjectService", () => {
         return Promise.all(queries);
       });
 
-      const result = await subjectService.getSubjects(
-        "teacher-1",
-        UserRole.Teacher,
-        0,
-        10
-      );
+      const result = await subjectService.getSubjects("teacher-1", UserRole.Teacher, 0, 10);
 
       expect(mockPrisma.subject.findMany).toHaveBeenCalledWith({
         where: { userId: "teacher-1" },
@@ -117,9 +116,7 @@ describe("SubjectService", () => {
     });
 
     it("returns all subjects for God role", async () => {
-      const mockSubjects = [
-        { id: 1, name: "Math", professor: { name: "John", lastName: "Doe" } },
-      ];
+      const mockSubjects = [{ id: 1, name: "Math", professor: { name: "John", lastName: "Doe" } }];
       mockPrisma.subject.findMany.mockResolvedValue(mockSubjects);
       mockPrisma.subject.count.mockResolvedValue(1);
       mockPrisma.$transaction.mockImplementation(async (queries) => {
@@ -151,13 +148,7 @@ describe("SubjectService", () => {
         return Promise.all(queries);
       });
 
-      await subjectService.getSubjects(
-        "teacher-1",
-        UserRole.Teacher,
-        0,
-        10,
-        "Math"
-      );
+      await subjectService.getSubjects("teacher-1", UserRole.Teacher, 0, 10, "Math");
 
       expect(mockPrisma.subject.findMany).toHaveBeenCalledWith({
         where: {
@@ -181,7 +172,7 @@ describe("SubjectService", () => {
       const mockSubject = { id: 1, name: "Math", userId: "teacher-1" };
       mockPrisma.subject.findFirst.mockResolvedValue(mockSubject);
 
-      const result = await subjectService.getSubjectById(1, "teacher-1");
+      const result = await subjectService.getSubjectById(1, UserRole.Teacher, "teacher-1");
 
       expect(mockPrisma.subject.findFirst).toHaveBeenCalledWith({
         where: { id: 1, userId: "teacher-1" },
@@ -189,12 +180,24 @@ describe("SubjectService", () => {
       expect(result).toEqual(mockSubject);
     });
 
+    it("returns any subject for God role without ownership filter", async () => {
+      const mockSubject = { id: 1, name: "Math", userId: "teacher-1" };
+      mockPrisma.subject.findFirst.mockResolvedValue(mockSubject);
+
+      const result = await subjectService.getSubjectById(1, UserRole.God, "god-1");
+
+      expect(mockPrisma.subject.findFirst).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
+      expect(result).toEqual(mockSubject);
+    });
+
     it("throws error when subject not found", async () => {
       mockPrisma.subject.findFirst.mockResolvedValue(null);
 
-      await expect(subjectService.getSubjectById(999, "teacher-1")).rejects.toThrow(
-        "Materia no encontrada o no tienes permisos para acceder a ella."
-      );
+      await expect(
+        subjectService.getSubjectById(999, UserRole.Teacher, "teacher-1")
+      ).rejects.toThrow("Materia no encontrada o no tienes permisos para acceder a ella.");
     });
   });
 
@@ -206,7 +209,7 @@ describe("SubjectService", () => {
       mockPrisma.subject.findFirst.mockResolvedValue(existingSubject);
       mockPrisma.subject.update.mockResolvedValue(updatedSubject);
 
-      const result = await subjectService.updateSubject(1, "teacher-1", {
+      const result = await subjectService.updateSubject(1, UserRole.Teacher, "teacher-1", {
         name: "Advanced Math",
       });
 
@@ -229,7 +232,7 @@ describe("SubjectService", () => {
       mockPrisma.subject.findFirst.mockResolvedValue(existingSubject);
       mockPrisma.subject.update.mockResolvedValue(updatedSubject);
 
-      const result = await subjectService.updateSubject(1, "teacher-1", {
+      const result = await subjectService.updateSubject(1, UserRole.Teacher, "teacher-1", {
         imageUrl: "https://example.com/image.jpg",
       });
 
@@ -252,7 +255,7 @@ describe("SubjectService", () => {
       mockPrisma.subject.findFirst.mockResolvedValue(existingSubject);
       mockPrisma.subject.update.mockResolvedValue(updatedSubject);
 
-      const result = await subjectService.updateSubject(1, "teacher-1", {
+      const result = await subjectService.updateSubject(1, UserRole.Teacher, "teacher-1", {
         imageUrl: null,
       });
 
@@ -267,7 +270,7 @@ describe("SubjectService", () => {
       mockPrisma.subject.findFirst.mockResolvedValue(null);
 
       await expect(
-        subjectService.updateSubject(999, "teacher-1", { name: "Test" })
+        subjectService.updateSubject(999, UserRole.Teacher, "teacher-1", { name: "Test" })
       ).rejects.toThrow("Materia no encontrada o no tienes permisos para acceder a ella.");
     });
   });
@@ -278,7 +281,7 @@ describe("SubjectService", () => {
       mockPrisma.subject.findFirst.mockResolvedValue(existingSubject);
       mockPrisma.subject.delete.mockResolvedValue(existingSubject);
 
-      await subjectService.deleteSubject(1, "teacher-1");
+      await subjectService.deleteSubject(1, UserRole.Teacher, "teacher-1");
 
       expect(mockPrisma.subject.delete).toHaveBeenCalledWith({
         where: { id: 1 },
@@ -288,9 +291,76 @@ describe("SubjectService", () => {
     it("throws error when subject not found", async () => {
       mockPrisma.subject.findFirst.mockResolvedValue(null);
 
-      await expect(subjectService.deleteSubject(999, "teacher-1")).rejects.toThrow(
-        "Materia no encontrada o no tienes permisos para acceder a ella."
+      await expect(
+        subjectService.deleteSubject(999, UserRole.Teacher, "teacher-1")
+      ).rejects.toThrow("Materia no encontrada o no tienes permisos para acceder a ella.");
+    });
+  });
+
+  describe("getStudentsBySubject", () => {
+    it("returns enrolled students for the owning teacher", async () => {
+      mockPrisma.subject.findFirst.mockResolvedValue({ id: 1, userId: "teacher-1" });
+      const mockEnrollments = [
+        {
+          createdAt: new Date("2024-01-01"),
+          student: { id: "s1", name: "Alan", lastName: "Turing", email: "alan@uady.mx" },
+        },
+      ];
+      mockPrisma.enrollment.findMany.mockResolvedValue(mockEnrollments);
+      mockPrisma.enrollment.count.mockResolvedValue(1);
+      mockPrisma.$transaction.mockImplementation(async (queries) => Promise.all(queries));
+
+      const result = await subjectService.getStudentsBySubject(
+        1,
+        UserRole.Teacher,
+        "teacher-1",
+        0,
+        10
       );
+
+      expect(mockPrisma.subject.findFirst).toHaveBeenCalledWith({
+        where: { id: 1, userId: "teacher-1" },
+      });
+      expect(mockPrisma.enrollment.findMany).toHaveBeenCalledWith({
+        where: { subjectId: 1 },
+        skip: 0,
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        include: {
+          student: {
+            select: {
+              id: true,
+              name: true,
+              lastName: true,
+              email: true,
+              identifier: true,
+            },
+          },
+        },
+      });
+      expect(result.totalCount).toBe(1);
+      expect(result.data[0].name).toBe("Alan");
+    });
+
+    it("allows God role to list students of any subject", async () => {
+      mockPrisma.subject.findFirst.mockResolvedValue({ id: 1, userId: "teacher-1" });
+      mockPrisma.enrollment.findMany.mockResolvedValue([]);
+      mockPrisma.enrollment.count.mockResolvedValue(0);
+      mockPrisma.$transaction.mockImplementation(async (queries) => Promise.all(queries));
+
+      await subjectService.getStudentsBySubject(1, UserRole.God, "god-1", 0, 10);
+
+      expect(mockPrisma.subject.findFirst).toHaveBeenCalledWith({
+        where: { id: 1 },
+      });
+    });
+
+    it("throws error when the teacher does not own the subject", async () => {
+      mockPrisma.subject.findFirst.mockResolvedValue(null);
+
+      await expect(
+        subjectService.getStudentsBySubject(1, UserRole.Teacher, "other-teacher", 0, 10)
+      ).rejects.toThrow("Materia no encontrada o no tienes permisos para acceder a ella.");
     });
   });
 });

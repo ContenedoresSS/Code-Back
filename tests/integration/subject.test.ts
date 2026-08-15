@@ -126,6 +126,21 @@ describe("Integration: Subject Endpoints", () => {
       expect(response.status).toBe(404);
     });
 
+    it("forwards the God role to access any subject", async () => {
+      const mockSubject = { id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null };
+
+      mockedSubjectService.getSubjectById.mockResolvedValue(mockSubject);
+
+      const token = generateGodToken("god-1");
+      const response = await request(app)
+        .get("/api/v1/subject/1")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.id).toBe(1);
+      expect(mockedSubjectService.getSubjectById).toHaveBeenCalledWith(1, "God", "god-1");
+    });
+
     it("returns 400 when ID is invalid", async () => {
       const token = generateTeacherToken();
       const response = await request(app)
@@ -221,7 +236,12 @@ describe("Integration: Subject Endpoints", () => {
 
   describe("PUT /api/v1/subject/:id", () => {
     it("updates subject for owner", async () => {
-      const mockSubject = { id: 1, name: "Advanced Mathematics", userId: "teacher-1", imageUrl: null };
+      const mockSubject = {
+        id: 1,
+        name: "Advanced Mathematics",
+        userId: "teacher-1",
+        imageUrl: null,
+      };
 
       mockedSubjectService.updateSubject.mockResolvedValue(mockSubject);
 
