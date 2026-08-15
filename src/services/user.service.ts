@@ -1,5 +1,26 @@
 import type { Prisma } from "@prisma/client";
+import bcrypt from "bcrypt";
 import prisma from "../config/prisma.js";
+import type { UpdateUserRequest } from "../types/requests/update-user-request.model.js";
+import type { UserListItemResponse } from "../types/responses/user-list-item-response.model.js";
+import type { PaginationData } from "../types/shared/pagination-data.shared.js";
+import { UserRole } from "../types/enums/role.enum.js";
+
+const userListItemSelect = {
+  id: true,
+  email: true,
+  name: true,
+  lastName: true,
+  identifier: true,
+  isActive: true,
+  createdAt: true,
+  role: { select: { id: true, name: true } },
+} as const satisfies Prisma.UserSelect;
+
+const toListItem = (user: Prisma.UserGetPayload<{ select: typeof userListItemSelect }>) => ({
+  ...user,
+  createdAt: user.createdAt.toISOString(),
+});
 
 class UserService {
   async create(data: any, tx?: any) {
@@ -127,6 +148,98 @@ class UserService {
         resetTokenExpires: null,
       },
       select: { id: true },
+    });
+  }
+
+  async listUsers(
+    roleName: string | undefined,
+    search: string | undefined,
+    skip: number = 0,
+    take: number = 10
+  ): Promise<PaginationData<UserListItemResponse>> {
+    const where: Prisma.UserWhereInput = {
+      ...(roleName ? { role: { name: roleName } } : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { lastName: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
+
+    const [users, totalCount] = await prisma.$transaction([
+      prisma.user.findMany({
+        where,
+        select: userListItemSelect,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return {
+      data: users.map(toListItem),
+      totalCount,
+    };
+  }
+
+  async updateUserByAdmin(id: string, data: UpdateUserRequest): Promise<UserListItemResponse> {
+    return prisma.$transaction(async (tx) => {
+      const target = await tx.user.findUnique({ where: { id }, include: { role: true } });
+
+      if (!target) {
+        throw new Error("Usuario no encontrado");
+      }
+
+      const losesAdminStatus =
+        target.role.name === UserRole.God &&
+        target.isActive &&
+        (data.isActive === false || (data.role !== undefined && data.role !== UserRole.God));
+
+      if (losesAdminStatus) {
+        const activeAdmins = await tx.$queryRaw<{ id: string }[]>`
+          SELECT u.id
+          FROM users u
+          INNER JOIN roles r ON u.role_id = r.id
+          WHERE r.name = ${UserRole.God} AND u.is_active = true
+          FOR UPDATE
+        `;
+
+        if (activeAdmins.length <= 1) {
+          throw new Error("No se puede desactivar o degradar al último administrador activo.");
+        }
+      }
+
+      const updateData: Prisma.UserUpdateInput = {};
+
+      if (data.password !== undefined) {
+        updateData.passwordHash = await bcrypt.hash(data.password, 10);
+      }
+
+      if (data.isActive !== undefined) {
+        updateData.isActive = data.isActive;
+      }
+
+      if (data.role !== undefined) {
+        const role = await tx.role.findUnique({ where: { name: data.role } });
+
+        if (!role) {
+          throw new Error("El rol no existe.");
+        }
+
+        updateData.role = { connect: { id: role.id } };
+      }
+
+      const updated = await tx.user.update({
+        where: { id },
+        data: updateData,
+        select: userListItemSelect,
+      });
+
+      return toListItem(updated);
     });
   }
 }
