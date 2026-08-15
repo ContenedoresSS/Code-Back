@@ -24,6 +24,7 @@ describe("Integration: Submission Endpoints", () => {
         executionTimeMs: 150,
         compilerOutput: null,
         languageId: 1,
+        saved: true,
       };
 
       mockedSubmissionService.processSubmission.mockResolvedValue(mockResult);
@@ -39,6 +40,7 @@ describe("Integration: Submission Endpoints", () => {
       expect(response.status).toBe(200);
       expect(response.body.status).toBe(SubmissionStatus.ACCEPTED);
       expect(response.body.finalGrade).toBe(100);
+      expect(response.body.saved).toBe(true);
     });
 
     it("submits code anonymously (without authentication)", async () => {
@@ -50,6 +52,7 @@ describe("Integration: Submission Endpoints", () => {
         executionTimeMs: 100,
         compilerOutput: null,
         languageId: 1,
+        saved: false,
       };
 
       mockedSubmissionService.processSubmission.mockResolvedValue(mockResult);
@@ -62,6 +65,7 @@ describe("Integration: Submission Endpoints", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.status).toBe(SubmissionStatus.ACCEPTED);
+      expect(response.body.saved).toBe(false);
     });
 
     it("forwards the requested languageId to the service", async () => {
@@ -73,6 +77,7 @@ describe("Integration: Submission Endpoints", () => {
         executionTimeMs: 100,
         compilerOutput: null,
         languageId: 7,
+        saved: true,
       });
 
       const files = [{ name: "main.java", content: "cHJpbnQoJ0hlbGxvJyk=" }];

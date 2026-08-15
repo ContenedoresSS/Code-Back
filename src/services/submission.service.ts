@@ -1,5 +1,5 @@
 import type { CodeFile } from "../types/models/execution/code-file.model.js";
-import type { EvaluationResult } from "../types/responses/evaluation-result.response.js";
+import type { SubmissionResult } from "../types/responses/submission-result.response.js";
 import type { ISubmissionService } from "./interfaces/submission.service.interface.js";
 import prisma from "../config/prisma.js";
 import evaluationService from "./evaluation.service.js";
@@ -57,7 +57,7 @@ export class SubmissionService implements ISubmissionService {
     files: CodeFile[],
     userId?: string,
     requestedLanguageId?: number
-  ): Promise<EvaluationResult> {
+  ): Promise<SubmissionResult> {
     try {
       const activity = await prisma.activity.findUnique({
         where: { id: activityId },
@@ -124,7 +124,10 @@ export class SubmissionService implements ISubmissionService {
         });
       }
 
-      return evaluationResult;
+      return {
+        ...evaluationResult,
+        saved: userId !== undefined,
+      };
     } catch (error: any) {
       if (
         error.message.includes("límite máximo") ||

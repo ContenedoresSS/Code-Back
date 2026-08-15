@@ -1,5 +1,5 @@
 import type { CodeFile } from "../../types/models/execution/code-file.model.js";
-import type { EvaluationResult } from "../../types/responses/evaluation-result.response.js";
+import type { SubmissionResult } from "../../types/responses/submission-result.response.js";
 
 export interface ISubmissionService {
   processSubmission(
@@ -7,5 +7,5 @@ export interface ISubmissionService {
     files: CodeFile[],
     userId?: string,
     requestedLanguageId?: number
-  ): Promise<EvaluationResult>;
+  ): Promise<SubmissionResult>;
 }
