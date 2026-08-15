@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.22-alpha] - 2026-08-15
+
+### Added
+- Teacher grades view per activity with paginated students, their best score and full submission history (GET /activity/:id/grades)
+- Submission responses report whether they were persisted, warning anonymous requests with `saved: false`
+- Admin-only user management: list users filtered by role and name (GET /user) and manage a user's password, active status and role (PATCH /user/:id)
+- Account active/inactive state, with login and refresh rejected for deactivated accounts (403)
+
+### Changed
+- Users table gains an `is_active` column defaulting to true, keeping existing accounts active
+
+### Fixed
+- God role can now access any subject, previously returning 404
+
 ## [0.0.21-alpha] - 2026-08-15
 
 ### Added
@@ -205,7 +219,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup
 - First commit
 
-[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.21-alpha...HEAD
+[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.22-alpha...HEAD
+[0.0.22-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.21-alpha...v0.0.22-alpha
 [0.0.21-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.20-alpha...v0.0.21-alpha
 [0.0.20-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.19-alpha...v0.0.20-alpha
 [0.0.19-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.18-alpha...v0.0.19-alpha
