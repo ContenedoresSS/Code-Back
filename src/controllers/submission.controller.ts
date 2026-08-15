@@ -4,6 +4,13 @@ import submissionService from "../services/submission.service.js";
 import { parseStringParam } from "../helpers/param.helper.js";
 import { isBase64 } from "../helpers/base64-validator.helper.js";
 import { QueueTimeoutError } from "../helpers/concurrency-limiter.helper.js";
+import { validateExecutionInputSize } from "../helpers/execution-size.helper.js";
+import { ENV } from "../config/env.config.js";
+
+const sizeLimits = {
+  maxCodeBytes: ENV.EXECUTION_MAX_CODE_BYTES,
+  maxStdinBytes: ENV.EXECUTION_MAX_STDIN_BYTES,
+};
 
 class SubmissionController {
   public async submit(req: Request, res: Response) {
@@ -44,6 +51,11 @@ class SubmissionController {
             error: `El contenido del archivo '${file.name}' debe estar codificado estrictamente en Base64.`,
           });
         }
+      }
+
+      const sizeError = validateExecutionInputSize({ files }, sizeLimits);
+      if (sizeError) {
+        return res.status(400).json({ error: sizeError });
       }
 
       const result = await submissionService.processSubmission(
