@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ProgrammingLanguage } from "@prisma/client";
 import { ExecutionStatus } from "../../src/types/enums/execution-status.enum.js";
 import type { CodeFile } from "../../src/types/models/execution/code-file.model.js";
+import { QueueTimeoutError } from "../../src/helpers/concurrency-limiter.helper.js";
 
 const { mockPrisma, mocks } = vi.hoisted(() => {
   process.env.EXECUTION_MEMORY_MB = "256";
@@ -11,6 +12,8 @@ const { mockPrisma, mocks } = vi.hoisted(() => {
   process.env.EXECUTION_AUTO_REMOVE = "false";
   process.env.EXECUTION_READONLY_ROOTFS = "false";
   process.env.EXECUTION_NO_NEW_PRIVILEGES = "false";
+  process.env.EXECUTION_MAX_CONCURRENCY = "1";
+  process.env.EXECUTION_QUEUE_TIMEOUT_MS = "200";
 
   return {
     mockPrisma: {
@@ -85,6 +88,8 @@ const mockLanguage: ProgrammingLanguage = {
 const files: CodeFile[] = [
   { name: "main.py", content: Buffer.from("print('hi')").toString("base64") },
 ];
+
+const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("ExecutionService", () => {
   beforeEach(() => {
@@ -195,6 +200,54 @@ describe("ExecutionService", () => {
       expect(mocks.createContainer).toHaveBeenCalledWith(
         expect.objectContaining({ Cmd: ["sh", "-c", "python3 solution.py"] })
       );
+    });
+  });
+
+  describe("concurrency limit", () => {
+    it("queues executions beyond EXECUTION_MAX_CONCURRENCY until a slot frees", async () => {
+      let releaseFirst: () => void = () => {};
+      const gateFirst = new Promise<{ StatusCode: number }>((resolve) => {
+        releaseFirst = () => resolve({ StatusCode: 0 });
+      });
+
+      const containerA = createFakeContainer({ wait: vi.fn().mockReturnValue(gateFirst) });
+      const containerB = createFakeContainer();
+      mocks.createContainer.mockResolvedValueOnce(containerA).mockResolvedValueOnce(containerB);
+
+      const first = executionService.runCodeWithFiles(1, files, "main.py");
+      await flush();
+
+      const second = executionService.runCodeWithFiles(1, files, "main.py");
+      await flush();
+
+      expect(mocks.createContainer).toHaveBeenCalledTimes(1);
+
+      releaseFirst();
+      await flush();
+
+      await Promise.all([first, second]);
+      expect(mocks.createContainer).toHaveBeenCalledTimes(2);
+    });
+
+    it("rejects with QueueTimeoutError when the queue wait exceeds the timeout", async () => {
+      let releaseBlocker: () => void = () => {};
+      const blocker = new Promise<{ StatusCode: number }>((resolve) => {
+        releaseBlocker = () => resolve({ StatusCode: 0 });
+      });
+
+      const containerA = createFakeContainer({ wait: vi.fn().mockReturnValue(blocker) });
+      const containerB = createFakeContainer();
+      mocks.createContainer.mockResolvedValueOnce(containerA).mockResolvedValueOnce(containerB);
+
+      const first = executionService.runCodeWithFiles(1, files, "main.py");
+      await flush();
+
+      const second = executionService.runCodeWithFiles(1, files, "main.py");
+
+      await expect(second).rejects.toBeInstanceOf(QueueTimeoutError);
+
+      releaseBlocker();
+      await first;
     });
   });
 });

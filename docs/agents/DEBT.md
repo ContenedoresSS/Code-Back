@@ -32,12 +32,15 @@ Análisis ordenado por pilares críticos del negocio, del más al menos priorita
 
 ### DEBT‑02: Sin límite de contenedores concurrentes
 
-- **Archivos**: `src/services/execution.service.ts:55-56`
+- **Archivos**: `src/services/execution.service.ts`, `src/helpers/concurrency-limiter.helper.ts`, `src/controllers/execution.controller.ts`, `src/controllers/submission.controller.ts`
 - **Problema**: Nada impide que 1000 requests lancen 1000 contenedores simultáneamente. El rate limit por IP mitiga parcialmente, pero es trivial de evadir con proxies.
 - **Impacto**: DoS trivial contra el VPS derribando el host. Agotamiento de RAM/CPU del VPS.
 - **Recomendación**:
-  1. Implementar un semáforo global con límite de contenedores concurrentes (ej. `p-limit` con `concurrency = 5`).
-  2. Cola de ejecución con FIFO y timeout.
+  1. ~~Implementar un semáforo global con límite de contenedores concurrentes (ej. `p-limit` con `concurrency = 5`).~~ ✅ **RESUELTO** con `ConcurrencyLimiter` propio (FIFO + timeout de cola) en `src/helpers/concurrency-limiter.helper.ts`, sin dependencia nueva.
+  2. ~~Cola de ejecución con FIFO y timeout.~~ ✅ **RESUELTO** con `EXECUTION_MAX_CONCURRENCY` (default `5`) y `EXECUTION_QUEUE_TIMEOUT_MS` (default `30000`).
+- **Comportamiento**: al superar `EXECUTION_MAX_CONCURRENCY`, los requests se encolan (FIFO) manteniendo abierto el request HTTP; si el turno no llega en `EXECUTION_QUEUE_TIMEOUT_MS`, se responde **429** con `QueueTimeoutError` tanto en `/run*` como en `/submit`. El error se propaga sin envolver a través de `evaluation.service` y `submission.service`.
+- **Resuelto en**: `feat/execution-concurrency-limit`
+- **Consideración residual**: el pull de imagen (`ensureImageExists`) queda fuera del semáforo; solo se limita la vida útil del contenedor.
 
 ### DEBT‑03: Sin validación de tamaño de entrada
 
@@ -463,7 +466,7 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 
 | Prioridad | DEBTs | Pilar | Acción sugerida |
 |-----------|-------|-------|-----------------|
-| **Crítica** | 01 ✅, 02, 03 | Sandbox | Corregir fugas de contenedores y DoS |
+| **Crítica** | 01 ✅, 02 ✅, 03 | Sandbox | Corregir fugas de contenedores y DoS |
 | **Alta** | 31 | Sandbox | Reconciliación externa de contenedores huérfanos (residual de DEBT‑01) |
 | **Alta** | 08, 09, 20 | Validación + Rate limit | Zod schemas y corregir límite a 2 |
 | **Alta** | 06, 07 | Error handling | AppError + middleware global |

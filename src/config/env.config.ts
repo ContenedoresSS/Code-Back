@@ -57,6 +57,8 @@ const envSchema = z
       .string()
       .default("true")
       .transform((v) => v === "true"),
+    EXECUTION_MAX_CONCURRENCY: z.coerce.number().int().positive().default(5),
+    EXECUTION_QUEUE_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   })
   .superRefine((env, ctx) => {
     if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {

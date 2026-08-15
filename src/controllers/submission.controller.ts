@@ -3,6 +3,7 @@ import type { CodeFile } from "../types/models/execution/code-file.model.js";
 import submissionService from "../services/submission.service.js";
 import { parseStringParam } from "../helpers/param.helper.js";
 import { isBase64 } from "../helpers/base64-validator.helper.js";
+import { QueueTimeoutError } from "../helpers/concurrency-limiter.helper.js";
 
 class SubmissionController {
   public async submit(req: Request, res: Response) {
@@ -54,6 +55,10 @@ class SubmissionController {
 
       return res.status(200).json(result);
     } catch (error: any) {
+      if (error instanceof QueueTimeoutError) {
+        return res.status(429).json({ error: error.message });
+      }
+
       if (error.message.includes("no existe")) {
         return res.status(404).json({ error: error.message });
       }

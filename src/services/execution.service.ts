@@ -3,6 +3,7 @@ import prisma from "../config/prisma.js";
 import tar from "tar-stream";
 import { ENV } from "../config/env.config.js";
 import { parseDockerLogs } from "../helpers/docker-logs.helper.js";
+import { ConcurrencyLimiter } from "../helpers/concurrency-limiter.helper.js";
 import type { ProgrammingLanguage } from "@prisma/client";
 import type { CodeFile } from "../types/models/execution/code-file.model.js";
 import type { ExecutionResult } from "../types/responses/execution-result.response.js";
@@ -24,6 +25,7 @@ interface WaitOutcome {
 
 class ExecutionService implements IExecutionService {
   private docker: Docker;
+  private readonly limiter: ConcurrencyLimiter;
 
   constructor() {
     const isWindows = process.platform === "win32";
@@ -31,6 +33,10 @@ class ExecutionService implements IExecutionService {
     this.docker = new Docker({
       socketPath: isWindows ? "//./pipe/docker_engine" : "/var/run/docker.sock",
     });
+    this.limiter = new ConcurrencyLimiter(
+      ENV.EXECUTION_MAX_CONCURRENCY,
+      ENV.EXECUTION_QUEUE_TIMEOUT_MS
+    );
   }
 
   public async runCode(languageId: number, code: string, stdin?: string): Promise<ExecutionResult> {
@@ -63,7 +69,16 @@ class ExecutionService implements IExecutionService {
     return this.execute(language, files, entryPoint, stdinBase64);
   }
 
-  private async execute(
+  private execute(
+    language: ProgrammingLanguage,
+    files: CodeFile[],
+    entryPoint: string,
+    stdinBase64?: string
+  ): Promise<ExecutionResult> {
+    return this.limiter.run(() => this.runContainer(language, files, entryPoint, stdinBase64));
+  }
+
+  private async runContainer(
     language: ProgrammingLanguage,
     files: CodeFile[],
     entryPoint: string,
