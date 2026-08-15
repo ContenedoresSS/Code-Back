@@ -1,10 +1,11 @@
-import type { Activity } from "@prisma/client";
+import type { Activity, Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
 import type { IActivityService } from "./interfaces/activity.service.interface.js";
 import type { CreateActivityRequest } from "../types/requests/create-activity-request.model.js";
 import type { UpdateActivityRequest } from "../types/requests/update-activity-request.model.js";
 import type { ActivityResponse } from "../types/responses/activity-response.model.js";
 import type { ActivitySummaryResponse } from "../types/responses/activity-summary-response.model.js";
+import type { StudentGradeResponse } from "../types/responses/student-grade-response.model.js";
 import type { PaginationData } from "../types/shared/pagination-data.shared.js";
 import type {
   StudentWorkspaceResponse,
@@ -208,6 +209,128 @@ export class ActivityService implements IActivityService {
         throw error;
       }
       throw new Error(`Error al eliminar la actividad: ${error.message}`);
+    }
+  }
+
+  public async getActivityGrades(
+    activityId: string,
+    userRole: UserRole,
+    userId: string,
+    skip: number = 0,
+    take: number = 10,
+    searchTerm?: string
+  ): Promise<PaginationData<StudentGradeResponse>> {
+    try {
+      const activity = await prisma.activity.findFirst({
+        where: { id: activityId },
+        include: { subject: { select: { userId: true } } },
+      });
+
+      if (!activity) {
+        throw new Error("Actividad no encontrada o no tienes permisos para acceder a ella.");
+      }
+
+      if (userRole !== UserRole.God && activity.subject.userId !== userId) {
+        throw new Error("No tienes permiso para ver las calificaciones de esta actividad.");
+      }
+
+      const userWhere: Prisma.UserWhereInput = {
+        submissions: { some: { activityId } },
+        ...(searchTerm
+          ? {
+              OR: [
+                { name: { contains: searchTerm, mode: "insensitive" } },
+                { lastName: { contains: searchTerm, mode: "insensitive" } },
+                { email: { contains: searchTerm, mode: "insensitive" } },
+                { identifier: { contains: searchTerm, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      };
+
+      const [students, totalCount] = await prisma.$transaction([
+        prisma.user.findMany({
+          where: userWhere,
+          select: { id: true, name: true, lastName: true, email: true, identifier: true },
+          orderBy: [{ lastName: "asc" }, { name: "asc" }],
+          skip,
+          take,
+        }),
+        prisma.user.count({ where: userWhere }),
+      ]);
+
+      const studentIds = students.map((student) => student.id);
+
+      const [maxGrades, submissions] = await Promise.all([
+        prisma.submission.groupBy({
+          by: ["studentId"],
+          where: { activityId, studentId: { in: studentIds } },
+          _max: { finalGrade: true },
+        }),
+        prisma.submission.findMany({
+          where: { activityId, studentId: { in: studentIds } },
+          orderBy: { submittedAt: "desc" },
+          select: {
+            id: true,
+            studentId: true,
+            finalGrade: true,
+            passedTests: true,
+            totalTests: true,
+            executionTimeMs: true,
+            status: true,
+            submittedAt: true,
+          },
+        }),
+      ]);
+
+      const maxGradeByStudent = new Map(
+        maxGrades.map((group) => [group.studentId, group._max.finalGrade])
+      );
+
+      const submissionsByStudent = new Map<string, typeof submissions>();
+      for (const submission of submissions) {
+        const list = submissionsByStudent.get(submission.studentId) ?? [];
+        list.push(submission);
+        submissionsByStudent.set(submission.studentId, list);
+      }
+
+      const data: StudentGradeResponse[] = students.map((student) => {
+        const maxGrade = maxGradeByStudent.get(student.id) ?? null;
+        const studentSubmissions = submissionsByStudent.get(student.id) ?? [];
+
+        return {
+          student: {
+            id: student.id,
+            name: student.name,
+            lastName: student.lastName,
+            email: student.email,
+            identifier: student.identifier,
+          },
+          finalGrade: maxGrade !== null ? Number(maxGrade) : null,
+          submissions: studentSubmissions.map((submission) => ({
+            id: submission.id,
+            finalGrade: submission.finalGrade !== null ? Number(submission.finalGrade) : null,
+            passedTests: submission.passedTests,
+            totalTests: submission.totalTests,
+            executionTimeMs: submission.executionTimeMs,
+            status: submission.status,
+            submittedAt: submission.submittedAt.toISOString(),
+          })),
+        };
+      });
+
+      return {
+        data,
+        totalCount,
+      };
+    } catch (error: any) {
+      if (
+        error.message.includes("Actividad no encontrada") ||
+        error.message.includes("No tienes permiso para ver las calificaciones")
+      ) {
+        throw error;
+      }
+      throw new Error(`Error al listar las calificaciones: ${error.message}`);
     }
   }
 

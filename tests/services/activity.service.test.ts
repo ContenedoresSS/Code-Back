@@ -17,6 +17,14 @@ const { mockPrisma } = vi.hoisted(() => ({
       delete: vi.fn(),
       count: vi.fn(),
     },
+    user: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
+    submission: {
+      groupBy: vi.fn(),
+      findMany: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
@@ -489,6 +497,158 @@ describe("ActivityService", () => {
         expectedOutput: "b3V0cHV0",
       });
       expect(result.testCases[0]).not.toHaveProperty("input");
+    });
+  });
+
+  describe("getActivityGrades", () => {
+    it("returns paginated grades grouped by student with the highest final grade", async () => {
+      const mockActivity = {
+        id: "a1",
+        subjectId: 1,
+        subject: { userId: "teacher-1" },
+      };
+      const mockStudents = [
+        { id: "s1", name: "Alan", lastName: "Turing", email: "alan@uady.mx", identifier: "A001" },
+        { id: "s2", name: "Grace", lastName: "Hopper", email: "grace@uady.mx", identifier: "A002" },
+      ];
+      const mockMaxGrades = [
+        { studentId: "s1", _max: { finalGrade: 90 } },
+        { studentId: "s2", _max: { finalGrade: 75 } },
+      ];
+      const mockSubmissions = [
+        {
+          id: "sub-1",
+          studentId: "s1",
+          finalGrade: 90,
+          passedTests: 9,
+          totalTests: 10,
+          executionTimeMs: 120,
+          status: "ACCEPTED",
+          submittedAt: new Date("2024-01-02"),
+        },
+        {
+          id: "sub-2",
+          studentId: "s1",
+          finalGrade: 85,
+          passedTests: 8,
+          totalTests: 10,
+          executionTimeMs: 150,
+          status: "WRONG_ANSWER",
+          submittedAt: new Date("2024-01-01"),
+        },
+        {
+          id: "sub-3",
+          studentId: "s2",
+          finalGrade: 75,
+          passedTests: 7,
+          totalTests: 10,
+          executionTimeMs: 200,
+          status: "ACCEPTED",
+          submittedAt: new Date("2024-01-03"),
+        },
+      ];
+
+      mockPrisma.activity.findFirst.mockResolvedValue(mockActivity);
+      mockPrisma.user.findMany.mockResolvedValue(mockStudents);
+      mockPrisma.user.count.mockResolvedValue(2);
+      mockPrisma.submission.groupBy.mockResolvedValue(mockMaxGrades);
+      mockPrisma.submission.findMany.mockResolvedValue(mockSubmissions);
+      mockPrisma.$transaction.mockImplementation(async (queries) => Promise.all(queries));
+
+      const result = await activityService.getActivityGrades(
+        "a1",
+        UserRole.Teacher,
+        "teacher-1",
+        0,
+        10
+      );
+
+      expect(result.totalCount).toBe(2);
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].student).toEqual({
+        id: "s1",
+        name: "Alan",
+        lastName: "Turing",
+        email: "alan@uady.mx",
+        identifier: "A001",
+      });
+      expect(result.data[0].finalGrade).toBe(90);
+      expect(result.data[0].submissions).toHaveLength(2);
+      expect(result.data[0].submissions[0].status).toBe("ACCEPTED");
+      expect(result.data[1].finalGrade).toBe(75);
+      expect(result.data[1].submissions).toHaveLength(1);
+    });
+
+    it("returns null finalGrade when the student has no graded submission", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "a1",
+        subjectId: 1,
+        subject: { userId: "teacher-1" },
+      });
+      mockPrisma.user.findMany.mockResolvedValue([
+        { id: "s1", name: "Alan", lastName: "Turing", email: "alan@uady.mx", identifier: "A001" },
+      ]);
+      mockPrisma.user.count.mockResolvedValue(1);
+      mockPrisma.submission.groupBy.mockResolvedValue([
+        { studentId: "s1", _max: { finalGrade: null } },
+      ]);
+      mockPrisma.submission.findMany.mockResolvedValue([]);
+      mockPrisma.$transaction.mockImplementation(async (queries) => Promise.all(queries));
+
+      const result = await activityService.getActivityGrades(
+        "a1",
+        UserRole.Teacher,
+        "teacher-1",
+        0,
+        10
+      );
+
+      expect(result.data[0].finalGrade).toBeNull();
+      expect(result.data[0].submissions).toEqual([]);
+    });
+
+    it("throws forbidden when the teacher is not the subject owner", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "a1",
+        subjectId: 1,
+        subject: { userId: "other-teacher" },
+      });
+
+      await expect(
+        activityService.getActivityGrades("a1", UserRole.Teacher, "teacher-1", 0, 10)
+      ).rejects.toThrow("No tienes permiso para ver las calificaciones");
+    });
+
+    it("throws not found when the activity does not exist", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue(null);
+
+      await expect(
+        activityService.getActivityGrades("a1", UserRole.Teacher, "teacher-1", 0, 10)
+      ).rejects.toThrow("Actividad no encontrada o no tienes permisos");
+    });
+
+    it("applies the search filter over name, last name, email or identifier", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "a1",
+        subjectId: 1,
+        subject: { userId: "teacher-1" },
+      });
+      mockPrisma.user.findMany.mockResolvedValue([]);
+      mockPrisma.user.count.mockResolvedValue(0);
+      mockPrisma.submission.groupBy.mockResolvedValue([]);
+      mockPrisma.submission.findMany.mockResolvedValue([]);
+      mockPrisma.$transaction.mockImplementation(async (queries) => Promise.all(queries));
+
+      await activityService.getActivityGrades("a1", UserRole.Teacher, "teacher-1", 0, 10, "turing");
+
+      expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            submissions: { some: { activityId: "a1" } },
+            OR: expect.any(Array),
+          }),
+        })
+      );
     });
   });
 });

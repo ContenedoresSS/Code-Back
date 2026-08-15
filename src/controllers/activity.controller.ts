@@ -115,6 +115,38 @@ class ActivityController {
     }
   }
 
+  public async getGrades(req: Request, res: Response) {
+    try {
+      const activityId = parseStringParam(req.params.id, "ID de la actividad");
+      const userId = (req as any).user as string;
+      const userRole = (req as any).role;
+
+      const { skip, take } = getPaginationParams(req);
+
+      const searchParam = req.query.search;
+      const searchTerm = typeof searchParam === "string" ? searchParam.trim() : undefined;
+
+      const paginatedGrades = await activityService.getActivityGrades(
+        activityId,
+        userRole,
+        userId,
+        skip,
+        take,
+        searchTerm
+      );
+
+      return res.status(200).json(paginatedGrades);
+    } catch (error: any) {
+      if (error.message.includes("Actividad no encontrada")) {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error.message.includes("No tienes permiso para ver las calificaciones")) {
+        return res.status(403).json({ error: error.message });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+  }
+
   public async getWorkspace(req: Request, res: Response) {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
