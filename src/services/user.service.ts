@@ -94,6 +94,41 @@ class UserService {
     if (!user) throw new Error("Usuario no encontrado");
     return user.passwordHash;
   }
+
+  async findByEmail(email: string) {
+    return await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        resetTokenHash: true,
+        resetTokenExpires: true,
+      },
+    });
+  }
+
+  async saveResetCode(id: string, codeHash: string, expiresAt: Date) {
+    return await prisma.user.update({
+      where: { id },
+      data: {
+        resetTokenHash: codeHash,
+        resetTokenExpires: expiresAt,
+      },
+      select: { id: true },
+    });
+  }
+
+  async clearResetCode(id: string) {
+    return await prisma.user.update({
+      where: { id },
+      data: {
+        resetTokenHash: null,
+        resetTokenExpires: null,
+      },
+      select: { id: true },
+    });
+  }
 }
 
 export default new UserService();
