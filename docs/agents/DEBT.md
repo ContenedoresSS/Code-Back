@@ -12,11 +12,23 @@ Análisis ordenado por pilares críticos del negocio, del más al menos priorita
 - **Problema**: Si el proceso Node se cae entre `createContainer` y el `finally`, el contenedor queda corriendo. El `finally` con `remove({ force: true })` silencia errores (`catch (e) {}`) y no hay un mecanismo externo de reconciliación.
 - **Impacto**: Fuga de recursos en el VPS. Acumulación de contenedores zombie que consumen RAM y CPU.
 - **Recomendación**:
-  1. Agregar `readOnly: true` al HostConfig para evitar escrituras en el FS del contenedor.
-  2. Agregar `SecurityOpt: ["no-new-privileges:true"]`.
-  3. Registrar IDs de contenedores activos y ejecutar un job periódico de limpieza (`docker ps -aq --filter status=exited`).
-  4. Usar `AutoRemove: true` (actualmente está en `false`) para que Docker limpie automáticamente al finalizar.
-  5. No silenciar errores del `finally`.
+  1. ~~Agregar `readOnly: true` al HostConfig para evitar escrituras en el FS del contenedor.~~ ✅ **RESUELTO** (feature flag `EXECUTION_READONLY_ROOTFS`, default `true`).
+  2. ~~Agregar `SecurityOpt: ["no-new-privileges:true"]`.~~ ✅ **RESUELTO** (feature flag `EXECUTION_NO_NEW_PRIVILEGES`, default `true`).
+  3. **PENDIENTE → ver DEBT‑31**: registrar IDs de contenedores activos y ejecutar un job periódico de limpieza (`docker ps -aq --filter status=exited`).
+  4. ~~Usar `AutoRemove: true` (actualmente está en `false`) para que Docker limpie automáticamente al finalizar.~~ ✅ **RESUELTO** (feature flag `EXECUTION_AUTO_REMOVE`, default `true`).
+  5. ~~No silenciar errores del `finally`.~~ ✅ **RESUELTO** (los fallos de `remove`/`kill` se loguean con `console.error`).
+- **Resuelto en**: `feat/execution-sandbox-hardening` (flags de sandbox + refactor del service). El resto del hueco de contenedores huérfanos (proceso Node caído entre `createContainer` y el `finally`) queda cubierto por `AutoRemove: true` y se mitiga de forma externa con DEBT‑31.
+
+### DEBT‑31: Sin mecanismo externo de reconciliación de contenedores huérfanos
+
+- **Archivos**: `src/services/execution.service.ts` (no implementado aún)
+- **Problema**: `AutoRemove` solo limpia contenedores que Docker ve salir. Si el proceso Node muere (OOM, `kill -9`, crash) entre `createContainer` y el arranque del contenedor, o si Docker pierde el evento de salida, el contenedor puede quedar corriendo sin que nadie lo recoja. No hay job periódico que reconcilie el estado real con el esperado.
+- **Impacto**: Riesgo residual de fuga de recursos frente a fallos de infraestructura (no cubiertos por el flujo normal).
+- **Recomendación**:
+  1. Registrar los IDs de contenedores activos en un registro en memoria (o en BD) al crearlos.
+  2. Job periódico (ej. `setInterval` o `node-cron`) que ejecute `docker ps -aq --filter status=exited` y elimine los huérfanos que ya no estén en el registro.
+  3. Reconciliar el registro al arrancar el proceso (limpiar IDs de un run anterior).
+- **Dependencia**: sin bloqueos. Debe hacerse en una rama separada para no mezclarlo con el hardening de DEBT‑01.
 
 ### DEBT‑02: Sin límite de contenedores concurrentes
 
@@ -451,7 +463,8 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 
 | Prioridad | DEBTs | Pilar | Acción sugerida |
 |-----------|-------|-------|-----------------|
-| **Crítica** | 01, 02, 03 | Sandbox | Corregir fugas de contenedores y DoS |
+| **Crítica** | 01 ✅, 02, 03 | Sandbox | Corregir fugas de contenedores y DoS |
+| **Alta** | 31 | Sandbox | Reconciliación externa de contenedores huérfanos (residual de DEBT‑01) |
 | **Alta** | 08, 09, 20 | Validación + Rate limit | Zod schemas y corregir límite a 2 |
 | **Alta** | 06, 07 | Error handling | AppError + middleware global |
 | **Alta** | 04, 05 | DI + acoplamiento | tsyringe, desacoplar servicios |

@@ -41,6 +41,22 @@ const envSchema = z
       .transform((v) => v === "true"),
     RESET_CODE_TTL_MINUTES: z.coerce.number().int().positive().default(15),
     MAIL_TEMPLATES_DIR: z.string().optional(),
+    EXECUTION_MEMORY_MB: z.coerce.number().int().positive().default(128),
+    EXECUTION_CPU_QUOTA: z.coerce.number().int().positive().default(50000),
+    EXECUTION_PIDS_LIMIT: z.coerce.number().int().positive().default(30),
+    EXECUTION_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+    EXECUTION_AUTO_REMOVE: z
+      .string()
+      .default("true")
+      .transform((v) => v === "true"),
+    EXECUTION_READONLY_ROOTFS: z
+      .string()
+      .default("true")
+      .transform((v) => v === "true"),
+    EXECUTION_NO_NEW_PRIVILEGES: z
+      .string()
+      .default("true")
+      .transform((v) => v === "true"),
   })
   .superRefine((env, ctx) => {
     if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {
