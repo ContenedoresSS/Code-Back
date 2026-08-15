@@ -4,6 +4,7 @@ import type { ActivityResponse } from "../../types/responses/activity-response.m
 import type { ActivitySummaryResponse } from "../../types/responses/activity-summary-response.model.js";
 import type { PaginationData } from "../../types/shared/pagination-data.shared.js";
 import type { StudentWorkspaceResponse } from "../../types/responses/student-workspace-response.js";
+import type { StudentGradeResponse } from "../../types/responses/student-grade-response.model.js";
 import { UserRole } from "../../types/enums/role.enum.js";
 
 export interface IActivityService {
@@ -27,4 +28,12 @@ export interface IActivityService {
   ): Promise<ActivityResponse>;
   deleteActivity(activityId: string, userRole: UserRole, userId: string): Promise<void>;
   getWorkspaceForStudent(activityId: string): Promise<StudentWorkspaceResponse>;
+  getActivityGrades(
+    activityId: string,
+    userRole: UserRole,
+    userId: string,
+    skip: number,
+    take: number,
+    searchTerm?: string
+  ): Promise<PaginationData<StudentGradeResponse>>;
 }

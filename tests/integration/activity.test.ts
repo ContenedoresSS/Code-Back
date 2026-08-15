@@ -366,16 +366,107 @@ describe("Integration: Activity Endpoints", () => {
     });
   });
 
-  describe("DELETE /api/v1/activity/:id", () => {
-    it("deletes activity for owner", async () => {
-      mockedActivityService.deleteActivity.mockResolvedValue();
+  describe("GET /api/v1/activity/:id/grades", () => {
+    it("returns paginated grades grouped by student for Teacher role", async () => {
+      const mockGrades = {
+        data: [
+          {
+            student: {
+              id: "s1",
+              name: "Alan",
+              lastName: "Turing",
+              email: "alan@uady.mx",
+              identifier: "A001",
+            },
+            finalGrade: 90,
+            submissions: [
+              {
+                id: "sub-1",
+                finalGrade: 90,
+                passedTests: 9,
+                totalTests: 10,
+                executionTimeMs: 120,
+                status: "ACCEPTED",
+                submittedAt: "2024-01-02T00:00:00.000Z",
+              },
+            ],
+          },
+        ],
+        totalCount: 1,
+      };
+
+      mockedActivityService.getActivityGrades.mockResolvedValue(mockGrades);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
-        .delete("/api/v1/activity/1")
+        .get("/api/v1/activity/1/grades")
         .set("Authorization", `Bearer ${token}`);
 
-      expect(response.status).toBe(204);
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty("data");
+      expect(response.body).toHaveProperty("totalCount");
+      expect(response.body.data[0].finalGrade).toBe(90);
+      expect(response.body.data[0].submissions).toHaveLength(1);
+    });
+
+    it("returns 401 when no token provided", async () => {
+      const response = await request(app).get("/api/v1/activity/1/grades");
+
+      expect(response.status).toBe(401);
+    });
+
+    it("returns 403 for Student role", async () => {
+      const token = generateStudentToken();
+      const response = await request(app)
+        .get("/api/v1/activity/1/grades")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(403);
+    });
+
+    it("returns 404 when activity not found", async () => {
+      mockedActivityService.getActivityGrades.mockRejectedValue(
+        new Error("Actividad no encontrada o no tienes permisos para acceder a ella.")
+      );
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .get("/api/v1/activity/999/grades")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(404);
+    });
+
+    it("returns 403 when the teacher is not the subject owner", async () => {
+      mockedActivityService.getActivityGrades.mockRejectedValue(
+        new Error("No tienes permiso para ver las calificaciones de esta actividad.")
+      );
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .get("/api/v1/activity/1/grades")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(403);
+    });
+
+    it("forwards the search query parameter", async () => {
+      mockedActivityService.getActivityGrades.mockResolvedValue({ data: [], totalCount: 0 });
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .get("/api/v1/activity/1/grades?search=turing")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(mockedActivityService.getActivityGrades).toHaveBeenCalledWith(
+        "1",
+        expect.any(String),
+        "teacher-1",
+        0,
+        10,
+        "turing"
+      );
     });
   });
 });

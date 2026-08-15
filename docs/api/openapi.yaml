@@ -997,7 +997,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EvaluationResult"
+                $ref: "#/components/schemas/SubmissionResult"
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
@@ -1016,6 +1016,53 @@ paths:
                 $ref: "#/components/schemas/Error"
         "429":
           $ref: "#/components/responses/TooManyRequests"
+
+  /activity/{id}/grades:
+    parameters:
+      - $ref: "#/components/parameters/ActivityId"
+    get:
+      operationId: activityGetGrades
+      tags: [Activity]
+      summary: Consultar calificaciones de una actividad (vista maestro)
+      description: |
+        Devuelve la lista paginada de estudiantes con envíos para la actividad,
+        agrupada por estudiante.
+
+        - Solo el profesor propietario de la materia de la actividad (o God).
+        - Solo se listan estudiantes con al menos un envío.
+        - `finalGrade` de cada estudiante es la **calificación más alta** entre
+          todos sus envíos.
+        - `submissions` es el historial completo del estudiante, ordenado del
+          envío más reciente al más antiguo.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Skip"
+        - $ref: "#/components/parameters/Take"
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Filtrar por nombre, apellido, email o matrícula (case‑insensitive)
+      responses:
+        "200":
+          description: Lista paginada de calificaciones agrupadas por estudiante
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedStudentGrades"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: >
+            El usuario no es el profesor propietario de la materia a la que
+            pertenece la actividad, o su rol no está autorizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   # ══════════════════════════════════════════════
   #  Test Case
@@ -1463,6 +1510,44 @@ components:
         languageId:
           type: integer
           description: ID del lenguaje de programación
+
+    SubmissionResult:
+      title: SubmissionResult
+      description: Resultado de la evaluación de un envío, con indicador de persistencia
+      type: object
+      required: [saved]
+      properties:
+        status:
+          $ref: "#/components/schemas/SubmissionStatus"
+        finalGrade:
+          type: number
+          description: Calificación sobre 100 (0 si hubo error)
+          example: 100
+        passedTests:
+          type: integer
+          description: Número de casos de prueba pasados
+          example: 3
+        totalTests:
+          type: integer
+          description: Número total de casos de prueba
+          example: 4
+        executionTimeMs:
+          type: integer
+          description: Tiempo total de ejecución en milisegundos
+          example: 1450
+        compilerOutput:
+          type: [string, "null"]
+          description: Mensaje de error si hubo fallo de compilación
+        languageId:
+          type: integer
+          description: ID del lenguaje de programación
+        saved:
+          type: boolean
+          description: |
+            Indica si el envío se persistió en la base de datos. Es `false`
+            cuando la petición no llegó con un token de acceso válido: el
+            código se evalúa, pero no se guarda ningún envío.
+          example: true
 
     SubmissionStatus:
       title: SubmissionStatus
@@ -2058,6 +2143,80 @@ components:
         totalCount:
           type: integer
           description: Total de registros disponibles
+
+    # ── Grades ──
+    StudentSubmission:
+      title: StudentSubmission
+      description: Envío de un estudiante dentro del historial de calificaciones
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único del envío
+        finalGrade:
+          type: [number, "null"]
+          description: Calificación del envío (0-100)
+        passedTests:
+          type: integer
+          description: Casos de prueba aprobados
+        totalTests:
+          type: integer
+          description: Total de casos de prueba
+        executionTimeMs:
+          type: [integer, "null"]
+          description: Tiempo de ejecución en milisegundos
+        status:
+          type: string
+          description: Estado del envío
+        submittedAt:
+          type: string
+          format: date-time
+          description: Fecha del envío
+
+    StudentGrade:
+      title: StudentGrade
+      description: Calificación agrupada de un estudiante para una actividad
+      type: object
+      properties:
+        student:
+          type: object
+          description: Datos del estudiante
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            lastName:
+              type: string
+            email:
+              type: string
+            identifier:
+              type: [string, "null"]
+              description: Matrícula (identificador único)
+        finalGrade:
+          type: [number, "null"]
+          description: Calificación final = máxima entre todos sus envíos
+        submissions:
+          type: array
+          description: Historial de envíos del estudiante (más reciente primero)
+          items:
+            $ref: "#/components/schemas/StudentSubmission"
+
+    PaginatedStudentGrades:
+      title: PaginatedStudentGrades
+      description: Lista paginada de calificaciones agrupadas por estudiante
+      type: object
+      properties:
+        data:
+          type: array
+          description: Arreglo de calificaciones por estudiante
+          items:
+            $ref: "#/components/schemas/StudentGrade"
+        totalCount:
+          type: integer
+          description: Total de estudiantes con envíos disponibles
 
     # ── Test Case ──
     CreateTestCaseRequest:
