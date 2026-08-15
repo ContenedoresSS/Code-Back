@@ -23,7 +23,7 @@ servers:
 
 tags:
   - name: Auth
-    description: Registro, login y refresh de tokens
+    description: Registro, login, refresh de tokens y recuperación de contraseña
   - name: Execution
     description: Ejecución de código en sandbox Docker
   - name: Invitation
@@ -53,12 +53,18 @@ paths:
   #  Health Check
   # ══════════════════════════════════════════════
   /api/health:
+    servers:
+      - url: http://localhost:3000
+        description: Desarrollo local
+      - url: https://codepanel.orchfr.duckdns.org
+        description: Producción
     get:
       operationId: healthCheck
       tags: [Health]
       summary: Health check endpoint
       description: |
         Smoke test para verificar que la API está funcionando.
+        Se sirve en la raíz (`/api/health`), fuera del prefijo `/api/v1`.
         **Rate‑limited**: 10 peticiones por minuto por IP.
       security: []
       responses:
@@ -148,6 +154,89 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LoginResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/forgot-password:
+    post:
+      operationId: authForgotPassword
+      tags: [Auth]
+      summary: Solicitar código de recuperación de contraseña
+      description: |
+        Genera un código numérico de 6 dígitos y lo envía por correo al usuario.
+        La respuesta es la misma exista o no el email (anti‑enumeración).
+        Requiere un proveedor de correo configurado (`EMAIL_PROVIDER`); de lo
+        contrario responde **500**.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Código enviado (si el email existe)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /auth/verify-reset-code:
+    post:
+      operationId: authVerifyResetCode
+      tags: [Auth]
+      summary: Validar código de recuperación
+      description: |
+        Verifica el código recibido por correo y su vigencia. Si es válido,
+        emite un token JWT de restablecimiento con validez de 15 minutos.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyResetCodeRequest"
+      responses:
+        "200":
+          description: Código válido, se emite el token de restablecimiento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyResetCodeResponse"
+        "400":
+          description: Código inválido o expirado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/reset-password:
+    post:
+      operationId: authResetPassword
+      tags: [Auth]
+      summary: Establecer nueva contraseña
+      description: |
+        Usa el token emitido en `/auth/verify-reset-code` para fijar una nueva
+        contraseña y limpiar el código de recuperación almacenado.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Contraseña actualizada correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
 
@@ -1233,6 +1322,67 @@ components:
         refreshToken:
           type: string
           description: Refresh token JWT válido
+
+    ForgotPasswordRequest:
+      title: ForgotPasswordRequest
+      description: Solicitud para enviar el código de recuperación de contraseña
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email de la cuenta registrada
+          example: student@example.com
+
+    VerifyResetCodeRequest:
+      title: VerifyResetCodeRequest
+      description: Validación del código de recuperación recibido por correo
+      type: object
+      required: [email, code]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email de la cuenta registrada
+          example: student@example.com
+        code:
+          type: string
+          description: Código numérico de 6 dígitos recibido por correo
+          example: "483920"
+
+    VerifyResetCodeResponse:
+      title: VerifyResetCodeResponse
+      description: Token de restablecimiento emitido tras validar el código
+      type: object
+      properties:
+        resetToken:
+          type: string
+          description: Token JWT de restablecimiento (15 minutos de validez)
+
+    ResetPasswordRequest:
+      title: ResetPasswordRequest
+      description: Solicitud para establecer una nueva contraseña
+      type: object
+      required: [resetToken, newPassword]
+      properties:
+        resetToken:
+          type: string
+          description: Token obtenido en POST /auth/verify-reset-code
+        newPassword:
+          type: string
+          format: password
+          description: Nueva contraseña del usuario
+          example: NewPassword123!!
+
+    MessageResponse:
+      title: MessageResponse
+      description: Respuesta genérica con mensaje informativo
+      type: object
+      properties:
+        message:
+          type: string
+          description: Mensaje descriptivo de la operación
 
     # ── Execution ──
     RunCodeWithFilesRequest:

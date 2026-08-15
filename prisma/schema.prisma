@@ -34,9 +34,11 @@ model User {
   passwordHash String   @map("password_hash") @db.Text
   name         String   @map("name") @db.VarChar(100)
   lastName     String   @map("last_name") @db.VarChar(100)
-  identifier   String?  @unique @db.VarChar(20)
-  roleId       Int      @map("role_id")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  identifier       String?  @unique @db.VarChar(20)
+  roleId           Int      @map("role_id")
+  resetTokenHash   String?  @map("reset_token_hash") @db.Text
+  resetTokenExpires DateTime? @map("reset_token_expires") @db.Timestamptz
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   role         Role     @relation(fields: [roleId], references: [id])
   subjectsTaught Subject[]  @relation("ProfessorSubjects")

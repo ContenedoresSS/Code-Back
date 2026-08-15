@@ -1,13 +1,20 @@
 import bcrypt from "bcrypt";
+import { randomInt } from "node:crypto";
 import prisma from "../config/prisma.js";
 import type { RegisterUserRequest } from "../types/requests/register-user-request.model.js";
 import type { RegisterUserReponse } from "../types/responses/register-user-response.model.js";
 import type { LoginRequest } from "../types/requests/login-request.model.js";
 import type { LoginResponse } from "../types/responses/login-response.model.js";
+import type { ForgotPasswordRequest } from "../types/requests/forgot-password-request.model.js";
+import type { VerifyResetCodeRequest } from "../types/requests/verify-reset-code-request.model.js";
+import type { VerifyResetCodeResponse } from "../types/responses/verify-reset-code-response.model.js";
+import type { ResetPasswordRequest } from "../types/requests/reset-password-request.model.js";
 import userService from "./user.service.js";
 import tokenService from "./token.service.js";
 import type { TokenPayload } from "../types/models/tokens/token-payload.model.js";
 import invitationService from "./invitation.service.js";
+import mailProviderFactory from "./mail/mail-provider.factory.js";
+import { ENV } from "../config/env.config.js";
 
 class AuthService {
   readonly SALT_ROUNDS: number = 10;
@@ -121,6 +128,65 @@ class AuthService {
       token: tokenPair.accessToken,
       refreshToken: tokenPair.refreshToken,
     } as LoginResponse;
+  }
+
+  public async forgotPassword(data: ForgotPasswordRequest): Promise<void> {
+    const provider = mailProviderFactory.create();
+
+    const user = await userService.findByEmail(data.email);
+
+    if (!user) {
+      return;
+    }
+
+    const code = this.generateResetCode();
+    const codeHash = await bcrypt.hash(code, this.SALT_ROUNDS);
+    const expiresAt = new Date(Date.now() + ENV.RESET_CODE_TTL_MINUTES * 60_000);
+
+    await userService.saveResetCode(user.id, codeHash, expiresAt);
+
+    await provider.send({
+      to: user.email,
+      subject: "Código de recuperación de contraseña",
+      text: `Tu código de recuperación es: ${code}. Expira en ${ENV.RESET_CODE_TTL_MINUTES} minutos.`,
+      html: `
+        <p>Tu código de recuperación de contraseña es:</p>
+        <h2>${code}</h2>
+        <p>Este código expira en ${ENV.RESET_CODE_TTL_MINUTES} minutos.</p>
+      `,
+    });
+  }
+
+  public async verifyResetCode(data: VerifyResetCodeRequest): Promise<VerifyResetCodeResponse> {
+    const user = await userService.findByEmail(data.email);
+
+    if (!user || !user.resetTokenHash || !user.resetTokenExpires) {
+      throw new Error("Invalid or expired reset code");
+    }
+
+    if (user.resetTokenExpires.getTime() < Date.now()) {
+      throw new Error("Invalid or expired reset code");
+    }
+
+    const isValid = await bcrypt.compare(data.code, user.resetTokenHash);
+    if (!isValid) {
+      throw new Error("Invalid or expired reset code");
+    }
+
+    const resetToken = tokenService.generateResetToken(user.id);
+    return { resetToken };
+  }
+
+  public async resetPassword(data: ResetPasswordRequest): Promise<void> {
+    const userId = tokenService.verifyResetToken(data.resetToken);
+
+    const hashedPassword = await bcrypt.hash(data.newPassword, this.SALT_ROUNDS);
+    await userService.updatePassword(userId, hashedPassword);
+    await userService.clearResetCode(userId);
+  }
+
+  private generateResetCode(): string {
+    return randomInt(0, 1_000_000).toString().padStart(6, "0");
   }
 }
 

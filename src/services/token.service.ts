@@ -4,6 +4,8 @@ import type { ITokenService } from "./interfaces/token-service.interface.js";
 import jwt from "jsonwebtoken";
 import { ENV } from "../config/env.config.js";
 
+const RESET_TOKEN_PURPOSE = "password-reset";
+
 class TokenService implements ITokenService {
   async generateTokenPair(payload: TokenPayload): Promise<TokenPair> {
     const accessToken = jwt.sign(
@@ -43,6 +45,32 @@ class TokenService implements ITokenService {
       return jwt.verify(token, ENV.JWT_REFRESH_SECRET) as { sub: string };
     } catch (error) {
       throw new Error("Invalid or expired refresh token");
+    }
+  }
+
+  generateResetToken(sub: string): string {
+    return jwt.sign(
+      {
+        sub,
+        purpose: RESET_TOKEN_PURPOSE,
+      },
+      ENV.JWT_SECRET,
+      { expiresIn: `${ENV.RESET_CODE_TTL_MINUTES * 60}s` }
+    );
+  }
+
+  verifyResetToken(token: string): string {
+    try {
+      const decoded = jwt.verify(token, ENV.JWT_SECRET) as {
+        sub: string;
+        purpose?: string;
+      };
+      if (decoded.purpose !== RESET_TOKEN_PURPOSE) {
+        throw new Error("Invalid or expired reset token");
+      }
+      return decoded.sub;
+    } catch (error) {
+      throw new Error("Invalid or expired reset token");
     }
   }
 }
