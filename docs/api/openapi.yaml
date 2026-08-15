@@ -133,6 +133,12 @@ paths:
                 $ref: "#/components/schemas/LoginResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: La cuenta está desactivada o suspendida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /auth/refresh:
     post:
@@ -156,6 +162,12 @@ paths:
                 $ref: "#/components/schemas/LoginResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          description: La cuenta está desactivada o suspendida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /auth/forgot-password:
     post:
@@ -597,6 +609,92 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           description: Contraseña actual incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /user:
+    get:
+      operationId: userList
+      tags: [User]
+      summary: Listar usuarios (solo administrador)
+      description: |
+        Devuelve la lista paginada de usuarios.
+
+        - Solo el rol **God** (administrador) puede acceder.
+        - Filtros opcionales por `role` (Student, Teacher, God) y `search`
+          (nombre o apellido).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Skip"
+        - $ref: "#/components/parameters/Take"
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [Student, Teacher, God]
+          description: Filtrar por nombre del rol
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Buscar por nombre o apellido (case‑insensitive)
+      responses:
+        "200":
+          description: Lista paginada de usuarios
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedUserList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /user/{id}:
+    parameters:
+      - $ref: "#/components/parameters/UserId"
+    patch:
+      operationId: userAdminUpdate
+      tags: [User]
+      summary: Gestionar un usuario (solo administrador)
+      description: |
+        Permite al administrador (rol **God**) cambiar la contraseña, activar o
+        desactivar la cuenta, o cambiar el rol de un usuario.
+
+        - No se puede desactivar ni degradar al **último administrador activo**
+          (responde `409`).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListItem"
+        "400":
+          description: Body vacío o rol inexistente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Se intentó desactivar o degradar al último administrador activo
           content:
             application/json:
               schema:
@@ -1184,6 +1282,14 @@ components:
         type: string
         format: uuid
       description: UUID de la actividad
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: UUID del usuario
     TestCaseId:
       name: testCaseId
       in: path
@@ -1707,6 +1813,10 @@ components:
         identifier:
           type: string
           description: Identificador único (matrícula)
+        isActive:
+          type: boolean
+          description: Indica si la cuenta está activa
+          example: true
         createdAt:
           type: string
           format: date-time
@@ -1719,6 +1829,75 @@ components:
               type: integer
             name:
               type: string
+
+    UserListItem:
+      title: UserListItem
+      description: Usuario en el listado de administración
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único del usuario
+        email:
+          type: string
+          description: Correo electrónico
+        name:
+          type: string
+          description: Nombre del usuario
+        lastName:
+          type: string
+          description: Apellido del usuario
+        identifier:
+          type: [string, "null"]
+          description: Identificador único (matrícula)
+        isActive:
+          type: boolean
+          description: Indica si la cuenta está activa
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha de registro
+        role:
+          type: object
+          description: Rol del usuario
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+
+    PaginatedUserList:
+      title: PaginatedUserList
+      description: Lista paginada de usuarios
+      type: object
+      properties:
+        data:
+          type: array
+          description: Arreglo de usuarios
+          items:
+            $ref: "#/components/schemas/UserListItem"
+        totalCount:
+          type: integer
+          description: Total de usuarios disponibles
+
+    UpdateUserRequest:
+      title: UpdateUserRequest
+      description: Datos para gestionar un usuario (solo administrador)
+      type: object
+      properties:
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: Nueva contraseña del usuario
+        isActive:
+          type: boolean
+          description: Activar o desactivar la cuenta
+        role:
+          type: string
+          enum: [Student, Teacher, God]
+          description: Nuevo rol del usuario
 
     UpdateProfileRequest:
       title: UpdateProfileRequest
