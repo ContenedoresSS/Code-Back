@@ -4,6 +4,7 @@ import type { ISubmissionService } from "./interfaces/submission.service.interfa
 import prisma from "../config/prisma.js";
 import evaluationService from "./evaluation.service.js";
 import { resolveActivityRules } from "../helpers/activity-rules.helper.js";
+import { QueueTimeoutError } from "../helpers/concurrency-limiter.helper.js";
 import {
   parseStarterCode,
   fileNamesMatchStarter,
@@ -129,6 +130,7 @@ export class SubmissionService implements ISubmissionService {
         saved: userId !== undefined,
       };
     } catch (error: any) {
+      if (error instanceof QueueTimeoutError) throw error;
       if (
         error.message.includes("límite máximo") ||
         error.message.includes("no existe") ||

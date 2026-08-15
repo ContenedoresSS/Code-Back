@@ -6,6 +6,7 @@ import type { CodeFile } from "../types/models/execution/code-file.model.js";
 import type { EvaluationResult } from "../types/responses/evaluation-result.response.js";
 import executionService from "./execution.service.js";
 import type { IEvaluationService } from "./interfaces/evaluation.service.interface.js";
+import { QueueTimeoutError } from "../helpers/concurrency-limiter.helper.js";
 
 export class EvaluationService implements IEvaluationService {
   public async evaluateSubmission(
@@ -90,6 +91,7 @@ export class EvaluationService implements IEvaluationService {
         languageId: languageId,
       };
     } catch (error: any) {
+      if (error instanceof QueueTimeoutError) throw error;
       throw new Error(`Error en el motor de evaluación: ${error.message}`);
     }
   }

@@ -9,6 +9,8 @@ vi.hoisted(() => {
     "EXECUTION_AUTO_REMOVE",
     "EXECUTION_READONLY_ROOTFS",
     "EXECUTION_NO_NEW_PRIVILEGES",
+    "EXECUTION_MAX_CONCURRENCY",
+    "EXECUTION_QUEUE_TIMEOUT_MS",
   ]) {
     delete process.env[key];
   }
@@ -43,5 +45,13 @@ describe("execution sandbox env defaults", () => {
 
   it("enables no-new-privileges by default", () => {
     expect(ENV.EXECUTION_NO_NEW_PRIVILEGES).toBe(true);
+  });
+
+  it("defaults max concurrency to 5", () => {
+    expect(ENV.EXECUTION_MAX_CONCURRENCY).toBe(5);
+  });
+
+  it("defaults queue timeout to 30000 ms", () => {
+    expect(ENV.EXECUTION_QUEUE_TIMEOUT_MS).toBe(30000);
   });
 });
