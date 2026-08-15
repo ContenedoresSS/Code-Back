@@ -99,6 +99,10 @@ class AuthService {
       throw new Error("Invalid credentials");
     }
 
+    if (!user.isActive) {
+      throw new Error("La cuenta está desactivada.");
+    }
+
     const pairTokens = await tokenService.generateTokenPair({
       sub: user.id,
       role: user.role.name,
@@ -117,6 +121,10 @@ class AuthService {
 
     if (!user) {
       throw new Error("User not found");
+    }
+
+    if (!user.isActive) {
+      throw new Error("La cuenta está desactivada.");
     }
 
     const tokenPair = await tokenService.generateTokenPair({

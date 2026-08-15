@@ -178,9 +178,7 @@ describe("AuthService", () => {
 
       mockPrisma.role.findUnique.mockResolvedValue(null);
 
-      await expect(authService.register(registerData)).rejects.toThrow(
-        "Default role not found"
-      );
+      await expect(authService.register(registerData)).rejects.toThrow("Default role not found");
     });
   });
 
@@ -196,6 +194,7 @@ describe("AuthService", () => {
         passwordHash: "$2b$10$hashedpassword",
         role: { name: "Student" },
         name: "John",
+        isActive: true,
       };
 
       const mockTokenPair = {
@@ -251,6 +250,27 @@ describe("AuthService", () => {
 
       await expect(authService.login(loginData)).rejects.toThrow("Invalid credentials");
     });
+
+    it("rejects login when the account is deactivated", async () => {
+      const loginData = {
+        identifier: "student@example.com",
+        password: "password123",
+      };
+
+      const mockUser = {
+        id: "user-1",
+        passwordHash: "$2b$10$hashedpassword",
+        role: { name: "Student" },
+        name: "John",
+        isActive: false,
+      };
+
+      mockedUserService.findByAnyIdentifierAndRole.mockResolvedValue(mockUser);
+      mockedBcrypt.compare.mockResolvedValue(true);
+
+      await expect(authService.login(loginData)).rejects.toThrow("La cuenta está desactivada");
+      expect(mockedTokenService.generateTokenPair).not.toHaveBeenCalled();
+    });
   });
 
   describe("refreshAccessToken", () => {
@@ -260,6 +280,7 @@ describe("AuthService", () => {
         id: "user-1",
         role: { name: "Student" },
         name: "John",
+        isActive: true,
       };
       const mockTokenPair = {
         accessToken: "new-access-token",
@@ -272,9 +293,7 @@ describe("AuthService", () => {
 
       const result = await authService.refreshAccessToken("valid-refresh-token");
 
-      expect(mockedTokenService.verifyRefreshToken).toHaveBeenCalledWith(
-        "valid-refresh-token"
-      );
+      expect(mockedTokenService.verifyRefreshToken).toHaveBeenCalledWith("valid-refresh-token");
       expect(mockedUserService.findByIdWithRole).toHaveBeenCalledWith("user-1");
       expect(mockedTokenService.generateTokenPair).toHaveBeenCalledWith({
         sub: "user-1",
@@ -292,9 +311,9 @@ describe("AuthService", () => {
         throw new Error("Invalid or expired refresh token");
       });
 
-      await expect(
-        authService.refreshAccessToken("invalid-token")
-      ).rejects.toThrow("Invalid or expired refresh token");
+      await expect(authService.refreshAccessToken("invalid-token")).rejects.toThrow(
+        "Invalid or expired refresh token"
+      );
     });
 
     it("throws error when user not found", async () => {
@@ -303,9 +322,26 @@ describe("AuthService", () => {
       mockedTokenService.verifyRefreshToken.mockReturnValue(mockDecoded);
       mockedUserService.findByIdWithRole.mockResolvedValue(null);
 
-      await expect(
-        authService.refreshAccessToken("valid-refresh-token")
-      ).rejects.toThrow("User not found");
+      await expect(authService.refreshAccessToken("valid-refresh-token")).rejects.toThrow(
+        "User not found"
+      );
+    });
+
+    it("rejects refresh when the account is deactivated", async () => {
+      const mockDecoded = { sub: "user-1" };
+
+      mockedTokenService.verifyRefreshToken.mockReturnValue(mockDecoded);
+      mockedUserService.findByIdWithRole.mockResolvedValue({
+        id: "user-1",
+        role: { name: "Student" },
+        name: "John",
+        isActive: false,
+      });
+
+      await expect(authService.refreshAccessToken("valid-refresh-token")).rejects.toThrow(
+        "La cuenta está desactivada"
+      );
+      expect(mockedTokenService.generateTokenPair).not.toHaveBeenCalled();
     });
   });
 });

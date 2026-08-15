@@ -36,6 +36,7 @@ model User {
   lastName     String   @map("last_name") @db.VarChar(100)
   identifier       String?  @unique @db.VarChar(20)
   roleId           Int      @map("role_id")
+  isActive         Boolean  @default(true) @map("is_active")
   resetTokenHash   String?  @map("reset_token_hash") @db.Text
   resetTokenExpires DateTime? @map("reset_token_expires") @db.Timestamptz
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
