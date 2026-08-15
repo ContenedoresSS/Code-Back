@@ -11,7 +11,7 @@ const whiteList = ENV.corsOrigins;
 
 export const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
-    if (!origin || whiteList.includes(origin)) {
+    if (!origin || whiteList.includes(origin) || whiteList.includes("*")) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
