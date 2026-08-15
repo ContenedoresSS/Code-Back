@@ -26,6 +26,7 @@ services:
       - "${HOST_PORT:-5555}:3000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./templates:/app/templates
     depends_on:
       db_postgres:
         condition: service_healthy

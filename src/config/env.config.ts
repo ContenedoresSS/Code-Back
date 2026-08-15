@@ -40,6 +40,7 @@ const envSchema = z
       .default("false")
       .transform((v) => v === "true"),
     RESET_CODE_TTL_MINUTES: z.coerce.number().int().positive().default(15),
+    MAIL_TEMPLATES_DIR: z.string().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.EMAIL_PROVIDER === "resend" && !env.RESEND_API_KEY) {

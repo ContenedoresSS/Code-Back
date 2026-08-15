@@ -1,0 +1,3 @@
+Tu código de recuperación de contraseña es: {{CODE}}
+
+Este código expira en {{TTL_MINUTES}} minutos.

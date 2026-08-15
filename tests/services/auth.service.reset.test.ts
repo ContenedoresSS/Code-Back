@@ -50,16 +50,24 @@ vi.mock("../../src/services/mail/mail-provider.factory.js", () => ({
   },
 }));
 
+vi.mock("../../src/services/mail/mail-template.service.js", () => ({
+  default: {
+    renderPasswordReset: vi.fn(),
+  },
+}));
+
 import authService from "../../src/services/auth.service.js";
 import userService from "../../src/services/user.service.js";
 import tokenService from "../../src/services/token.service.js";
 import mailProviderFactory from "../../src/services/mail/mail-provider.factory.js";
+import mailTemplateService from "../../src/services/mail/mail-template.service.js";
 import { MailProviderNotConfiguredError } from "../../src/services/mail/mail-provider-not-configured.error.js";
 import bcrypt from "bcrypt";
 
 const mockedUserService = vi.mocked(userService);
 const mockedTokenService = vi.mocked(tokenService);
 const mockedFactory = vi.mocked(mailProviderFactory);
+const mockedTemplateService = vi.mocked(mailTemplateService);
 const mockedBcrypt = vi.mocked(bcrypt);
 
 describe("AuthService reset flow", () => {
@@ -69,6 +77,11 @@ describe("AuthService reset flow", () => {
     vi.clearAllMocks();
     mockSend = vi.fn().mockResolvedValue(undefined);
     mockedFactory.create.mockReturnValue({ send: mockSend } as never);
+    mockedTemplateService.renderPasswordReset.mockImplementation(({ code, ttlMinutes }) => ({
+      subject: "Código de recuperación de contraseña",
+      text: `text ${code} ${ttlMinutes}`,
+      html: `<h2>${code}</h2>`,
+    }));
   });
 
   describe("forgotPassword", () => {
@@ -89,6 +102,12 @@ describe("AuthService reset flow", () => {
         "user-1",
         "$2b$10$hashedcode",
         expect.any(Date)
+      );
+      expect(mockedTemplateService.renderPasswordReset).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: expect.stringMatching(/^\d{6}$/),
+          ttlMinutes: expect.any(Number),
+        })
       );
       expect(mockedFactory.create).toHaveBeenCalled();
       expect(mockSend).toHaveBeenCalledWith(
