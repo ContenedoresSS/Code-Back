@@ -14,6 +14,7 @@ import tokenService from "./token.service.js";
 import type { TokenPayload } from "../types/models/tokens/token-payload.model.js";
 import invitationService from "./invitation.service.js";
 import mailProviderFactory from "./mail/mail-provider.factory.js";
+import mailTemplateService from "./mail/mail-template.service.js";
 import { ENV } from "../config/env.config.js";
 
 class AuthService {
@@ -145,15 +146,16 @@ class AuthService {
 
     await userService.saveResetCode(user.id, codeHash, expiresAt);
 
+    const rendered = mailTemplateService.renderPasswordReset({
+      code,
+      ttlMinutes: ENV.RESET_CODE_TTL_MINUTES,
+    });
+
     await provider.send({
       to: user.email,
-      subject: "Código de recuperación de contraseña",
-      text: `Tu código de recuperación es: ${code}. Expira en ${ENV.RESET_CODE_TTL_MINUTES} minutos.`,
-      html: `
-        <p>Tu código de recuperación de contraseña es:</p>
-        <h2>${code}</h2>
-        <p>Este código expira en ${ENV.RESET_CODE_TTL_MINUTES} minutos.</p>
-      `,
+      subject: rendered.subject,
+      text: rendered.text,
+      html: rendered.html,
     });
   }
 
