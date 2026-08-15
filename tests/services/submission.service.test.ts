@@ -84,7 +84,7 @@ describe("SubmissionService", () => {
           status: SubmissionStatus.ACCEPTED,
         }),
       });
-      expect(result).toEqual(mockEvaluationResult);
+      expect(result).toEqual({ ...mockEvaluationResult, saved: true });
     });
 
     it("does not save submission for anonymous user", async () => {
@@ -111,7 +111,7 @@ describe("SubmissionService", () => {
 
       expect(mockPrisma.submission.count).not.toHaveBeenCalled();
       expect(mockPrisma.submission.create).not.toHaveBeenCalled();
-      expect(result).toEqual(mockEvaluationResult);
+      expect(result).toEqual({ ...mockEvaluationResult, saved: false });
     });
 
     it("throws error when activity not found", async () => {
