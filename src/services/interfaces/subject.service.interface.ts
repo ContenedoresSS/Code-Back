@@ -23,15 +23,17 @@ export interface ISubjectService {
   ): Promise<PaginationData<SubjectResponse>>;
 
   /**
-   * Obtiene un curso específico, validando que pertenezca al usuario.
+   * Obtiene un curso específico. Los profesores solo ven sus propios cursos;
+   * el rol God puede acceder a cualquiera.
    */
-  getSubjectById(subjectId: number, userId: string): Promise<SubjectResponse>;
+  getSubjectById(subjectId: number, userRole: UserRole, userId: string): Promise<SubjectResponse>;
 
   /**
    * Actualiza el nombre de un curso.
    */
   updateSubject(
     subjectId: number,
+    userRole: UserRole,
     userId: string,
     data: UpdateSubjectRequest
   ): Promise<SubjectResponse>;
@@ -39,13 +41,14 @@ export interface ISubjectService {
   /**
    * Elimina un curso verificando su pertenencia.
    */
-  deleteSubject(subjectId: number, userId: string): Promise<void>;
+  deleteSubject(subjectId: number, userRole: UserRole, userId: string): Promise<void>;
 
   /**
    * Obtiene la lista paginada de alumnos inscritos en una materia.
    */
   getStudentsBySubject(
     subjectId: number,
+    userRole: UserRole,
     userId: string,
     skip: number,
     take: number,

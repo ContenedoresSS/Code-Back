@@ -47,12 +47,13 @@ class SubjectController {
     try {
       const subjectId = parseIdParam(req.params.id);
       const userId = req.user as string;
+      const userRole = (req as any).role as UserRole;
 
       if (isNaN(subjectId)) {
         return res.status(400).json({ error: "El ID proporcionado no es válido." });
       }
 
-      const subject = await subjectService.getSubjectById(subjectId, userId);
+      const subject = await subjectService.getSubjectById(subjectId, userRole, userId);
       return res.status(200).json(subject);
     } catch (error: any) {
       if (error.message.includes("Materia no encontrada")) {
@@ -66,13 +67,14 @@ class SubjectController {
     try {
       const subjectId = parseIdParam(req.params.id);
       const userId = req.user as string;
+      const userRole = (req as any).role as UserRole;
       const data: UpdateSubjectRequest = req.body;
 
       if (isNaN(subjectId)) {
         return res.status(400).json({ error: "El ID proporcionado no es válido." });
       }
 
-      const updatedSubject = await subjectService.updateSubject(subjectId, userId, data);
+      const updatedSubject = await subjectService.updateSubject(subjectId, userRole, userId, data);
       return res.status(200).json(updatedSubject);
     } catch (error: any) {
       if (error.message.includes("Materia no encontrada")) {
@@ -86,12 +88,13 @@ class SubjectController {
     try {
       const subjectId = parseIdParam(req.params.id);
       const userId = req.user as string;
+      const userRole = (req as any).role as UserRole;
 
       if (isNaN(subjectId)) {
         return res.status(400).json({ error: "El ID proporcionado no es válido." });
       }
 
-      await subjectService.deleteSubject(subjectId, userId);
+      await subjectService.deleteSubject(subjectId, userRole, userId);
 
       return res.status(204).send();
     } catch (error: any) {
@@ -106,6 +109,7 @@ class SubjectController {
     try {
       const subjectId = parseIdParam(req.params.id);
       const userId = req.user as string;
+      const userRole = (req as any).role as UserRole;
 
       if (isNaN(subjectId)) {
         return res.status(400).json({ error: "El ID proporcionado no es válido." });
@@ -118,6 +122,7 @@ class SubjectController {
 
       const paginatedStudents = await subjectService.getStudentsBySubject(
         subjectId,
+        userRole,
         userId,
         skip,
         take,

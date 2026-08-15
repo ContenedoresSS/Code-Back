@@ -65,13 +65,16 @@ export class SubjectService implements ISubjectService {
     }
   }
 
-  public async getSubjectById(subjectId: number, userId: string): Promise<SubjectResponse> {
+  public async getSubjectById(
+    subjectId: number,
+    userRole: UserRole,
+    userId: string
+  ): Promise<SubjectResponse> {
     try {
+      const isGod = userRole === UserRole.God;
+
       const subject = await prisma.subject.findFirst({
-        where: {
-          id: subjectId,
-          userId: userId,
-        },
+        where: isGod ? { id: subjectId } : { id: subjectId, userId: userId },
       });
 
       if (!subject) {
@@ -89,11 +92,12 @@ export class SubjectService implements ISubjectService {
 
   public async updateSubject(
     subjectId: number,
+    userRole: UserRole,
     userId: string,
     data: UpdateSubjectRequest
   ): Promise<SubjectResponse> {
     try {
-      const existingSubject = await this.getSubjectById(subjectId, userId);
+      const existingSubject = await this.getSubjectById(subjectId, userRole, userId);
 
       const updateData: { name?: string; imageUrl?: string | null } = {};
 
@@ -123,9 +127,9 @@ export class SubjectService implements ISubjectService {
     }
   }
 
-  public async deleteSubject(subjectId: number, userId: string): Promise<void> {
+  public async deleteSubject(subjectId: number, userRole: UserRole, userId: string): Promise<void> {
     try {
-      await this.getSubjectById(subjectId, userId);
+      await this.getSubjectById(subjectId, userRole, userId);
 
       await prisma.subject.delete({
         where: { id: subjectId },
@@ -140,13 +144,14 @@ export class SubjectService implements ISubjectService {
 
   public async getStudentsBySubject(
     subjectId: number,
+    userRole: UserRole,
     userId: string,
     skip: number = 0,
     take: number = 10,
     searchTerm?: string
   ): Promise<PaginationData<EnrolledStudentResponse>> {
     try {
-      await this.getSubjectById(subjectId, userId);
+      await this.getSubjectById(subjectId, userRole, userId);
 
       const enrollmentWhere: any = { subjectId };
 
