@@ -40,6 +40,9 @@ class AuthController {
 
       return res.status(200).json(result);
     } catch (error: any) {
+      if (error.message.includes("desactivada")) {
+        return res.status(403).json({ error: error.message });
+      }
       return res.status(401).json({
         error: error.message || "Login failed",
       });
@@ -53,6 +56,9 @@ class AuthController {
 
       return res.status(200).json(result);
     } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes("desactivada")) {
+        return res.status(403).json({ error: error.message });
+      }
       return res.status(400).json({
         error: error instanceof Error ? error.message : "Refresh token failed",
       });
