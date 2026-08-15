@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.21-alpha] - 2026-08-15
+
+### Added
+- Password recovery flow by email code with request, verification and reset endpoints
+- Email delivery through strategy pattern with Resend and native SMTP providers, selected via EMAIL_PROVIDER
+- Editable email templates as files under templates/mail, applied on process restart
+- Password reset code lifetime configurable via RESET_CODE_TTL_MINUTES
+- CORS allowed origins configurable via CORS_ORIGINS environment variable
+
+### Fixed
+- CORS wildcard now allows any origin when CORS_ORIGINS is "*"
+- Health check endpoint documented at its real path /api/health instead of /api/v1/api/health
+
+### Changed
+- Agent and release documentation split into modular reference files under docs/agents/
+
 ## [0.0.20-alpha] - 2026-08-05
 
 ### Added
@@ -189,7 +205,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup
 - First commit
 
-[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.20-alpha...HEAD
+[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.21-alpha...HEAD
+[0.0.21-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.20-alpha...v0.0.21-alpha
 [0.0.20-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.19-alpha...v0.0.20-alpha
 [0.0.19-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.18-alpha...v0.0.19-alpha
 [0.0.18-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.17-alpha...v0.0.18-alpha
