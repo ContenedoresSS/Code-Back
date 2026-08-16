@@ -2,6 +2,46 @@
 
 Análisis ordenado por pilares críticos del negocio, del más al menos prioritario. Cada hallazgo incluye: problema, impacto, recomendación y referencia a los archivos involucrados.
 
+## Estado de la deuda técnica
+
+Leyenda: ✅ Resuelto · 🔶 Parcial · ⏳ Abierta.
+
+| DEBT | Título | Pilar | Estado | Rama / Nota |
+|------|--------|-------|--------|-------------|
+| 01 | Contenedores huérfanos | 0 | 🔶 Parcial (4/5) | feat/execution-sandbox-hardening · residual → DEBT‑31 |
+| 02 | Sin límite de contenedores concurrentes | 0 | ✅ Resuelto | feat/execution-concurrency-limit |
+| 03 | Sin validación de tamaño de entrada | 0 | ✅ Resuelto | feat/execution-input-size-limit |
+| 31 | Sin reconciliación externa de contenedores | 0 | ⏳ Abierta | — |
+| 04 | Servicios singletons acoplados | 1 | ⏳ Abierta | — |
+| 05 | Patrón de exportación inconsistente | 1 | ⏳ Abierta | — |
+| 06 | Sin manejo centralizado de errores | 2 | ⏳ Abierta | — |
+| 07 | Errores de BD silenciados | 2 | ⏳ Abierta | — |
+| 08 | Request body sin validación en runtime | 3 | ⏳ Abierta | — |
+| 09 | Base64 solo validado con regex | 3 | ⏳ Abierta | — |
+| 10 | Cero tests | 4 | ✅ Resuelto | Sesión Vitest + supertest |
+| 11 | Tipos `any` por todo el código | 5 | ⏳ Abierta | — |
+| 12 | Estilos inconsistentes en controladores | 5 | ⏳ Abierta | — |
+| 13 | Interfaces con implementación parcial | 5 | ⏳ Abierta | — |
+| 14 | Código muerto | 5 | ⏳ Abierta | — |
+| 15 | Seed duplica singleton de Prisma | 5 | ⏳ Abierta | — |
+| 16 | Sin logging estructurado | 6 | ⏳ Abierta | — |
+| 17 | Sin health check ni readiness probe | 6 | ⏳ Abierta | — |
+| 18 | Seed usa conexión directa de pg | 7 | ⏳ Abierta | — |
+| 19 | Faltan índices en la BD | 7 | ⏳ Abierta | — |
+| 20 | Rate limit desalineado con lo documentado | 8 | ⏳ Abierta | — |
+| 21 | Sin rate limiting en login | 8 | ⏳ Abierta | — |
+| 22 | Tipos desorganizados entre carpetas | 9 | ⏳ Abierta | — |
+| 23 | Variables de CORS hardcodeadas | 9 | ✅ Resuelto | feat/cors-from-env |
+| 24 | Sin endpoints de matriculación | 10 | ⏳ Abierta | — |
+| 25 | Sin endpoint de consulta de entregas | 10 | ⏳ Abierta | — |
+| 26 | Workspace público sin autenticación | 10 | ⏳ Abierta | — |
+| 27 | OpenAPI spec standalone | 11 | ⏳ Abierta | — |
+| 28 | VPS no usa compose.prod.yaml | 12 | ⏳ Abierta | — |
+| 30 | Rollback automático del deploy roto | 12 | ⏳ Abierta | — |
+| 29 | Subida directa de imágenes | 13 | ⏳ Abierta | — |
+
+**Resumen**: 31 deudas · 4 ✅ resueltas · 1 🔶 parcial (01) · 26 ⏳ abiertas.
+
 ---
 
 ## Pilar 0 — Seguridad y confiabilidad del sandbox (riesgo directo al VPS)
