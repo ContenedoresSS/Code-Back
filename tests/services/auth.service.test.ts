@@ -44,20 +44,29 @@ vi.mock("../../src/services/token.service.js", () => ({
   },
 }));
 
+vi.mock("../../src/services/setting.service.js", () => ({
+  default: {
+    getAllowedEmailDomains: vi.fn(),
+  },
+}));
+
 import authService from "../../src/services/auth.service.js";
 import userService from "../../src/services/user.service.js";
 import invitationService from "../../src/services/invitation.service.js";
 import tokenService from "../../src/services/token.service.js";
+import settingService from "../../src/services/setting.service.js";
 import bcrypt from "bcrypt";
 
 const mockedUserService = vi.mocked(userService);
 const mockedInvitationService = vi.mocked(invitationService);
 const mockedTokenService = vi.mocked(tokenService);
+const mockedSettingService = vi.mocked(settingService);
 const mockedBcrypt = vi.mocked(bcrypt);
 
 describe("AuthService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedSettingService.getAllowedEmailDomains.mockResolvedValue([]);
   });
 
   describe("register", () => {
@@ -179,6 +188,53 @@ describe("AuthService", () => {
       mockPrisma.role.findUnique.mockResolvedValue(null);
 
       await expect(authService.register(registerData)).rejects.toThrow("Default role not found");
+    });
+
+    it("rejects registration when the email domain is not allowed", async () => {
+      const registerData = {
+        email: "student@gmail.com",
+        password: "password123",
+        name: "John",
+        lastName: "Doe",
+      };
+
+      mockedSettingService.getAllowedEmailDomains.mockResolvedValue(["uady.mx"]);
+
+      await expect(authService.register(registerData)).rejects.toThrow(
+        "El dominio del correo no está permitido"
+      );
+      expect(mockedUserService.create).not.toHaveBeenCalled();
+    });
+
+    it("allows registration when the email domain is allowed", async () => {
+      const registerData = {
+        email: "student@uady.mx",
+        password: "password123",
+        name: "John",
+        lastName: "Doe",
+      };
+
+      const mockStudentRole = { id: 1, name: "Student" };
+      const mockUser = {
+        id: "user-1",
+        username: "student@uady.mx",
+        email: "student@uady.mx",
+        name: "John",
+        lastName: "Doe",
+      };
+
+      mockedSettingService.getAllowedEmailDomains.mockResolvedValue(["uady.mx"]);
+      mockPrisma.role.findUnique.mockResolvedValue(mockStudentRole);
+      mockPrisma.$transaction.mockImplementation(async (callback) => {
+        const mockTx = {};
+        mockedUserService.create.mockResolvedValue(mockUser);
+        return callback(mockTx);
+      });
+
+      const result = await authService.register(registerData);
+
+      expect(mockedUserService.create).toHaveBeenCalled();
+      expect(result.email).toBe("student@uady.mx");
     });
   });
 

@@ -1238,6 +1238,56 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # ══════════════════════════════════════════════
+  #  Settings
+  # ══════════════════════════════════════════════
+  /settings/email-domains:
+    get:
+      operationId: emailDomainsGet
+      tags: [Settings]
+      summary: Obtener dominios de correo permitidos para el registro
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Lista de dominios permitidos (vacía = todos permitidos)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailDomains"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      operationId: emailDomainsUpdate
+      tags: [Settings]
+      summary: Reemplazar la lista de dominios de correo permitidos
+      description: |
+        Reemplaza por completo la lista de dominios permitidos. Si se envía una
+        lista vacía, se permiten todos los dominios.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEmailDomainsRequest"
+      responses:
+        "200":
+          description: Lista de dominios actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailDomains"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
 # ══════════════════════════════════════════════
 #  Components
 # ══════════════════════════════════════════════
@@ -1335,6 +1385,33 @@ components:
       description: Registros por página
 
   schemas:
+    # ── Settings ──
+    EmailDomains:
+      title: EmailDomains
+      description: Lista de dominios de correo permitidos para el registro
+      type: object
+      required: [domains]
+      properties:
+        domains:
+          type: array
+          description: Dominios permitidos (vacío = todos permitidos)
+          items:
+            type: string
+            example: uady.mx
+
+    UpdateEmailDomainsRequest:
+      title: UpdateEmailDomainsRequest
+      description: Cuerpo para reemplazar la lista de dominios permitidos
+      type: object
+      required: [domains]
+      properties:
+        domains:
+          type: array
+          description: Nuevos dominios permitidos (vacío = todos permitidos)
+          items:
+            type: string
+            example: uady.mx
+
     # ── Shared ──
     Error:
       title: Error

@@ -6,6 +6,14 @@ datasource db {
   provider = "postgresql"
 }
 
+model AppSetting {
+  key       String   @id @db.VarChar(50)
+  value     Json
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("app_settings")
+}
+
 model Role {
   id Int @id @default(autoincrement())
   name String @unique
