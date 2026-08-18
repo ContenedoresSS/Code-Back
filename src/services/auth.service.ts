@@ -15,12 +15,21 @@ import type { TokenPayload } from "../types/models/tokens/token-payload.model.js
 import invitationService from "./invitation.service.js";
 import mailProviderFactory from "./mail/mail-provider.factory.js";
 import mailTemplateService from "./mail/mail-template.service.js";
+import settingService from "./setting.service.js";
+import { EmailDomainNotAllowedError } from "./mail/email-domain-not-allowed.error.js";
+import { extractEmailDomain, isEmailDomainAllowed } from "../helpers/email-domain.helper.js";
 import { ENV } from "../config/env.config.js";
 
 class AuthService {
   readonly SALT_ROUNDS: number = 10;
 
   public async register(data: RegisterUserRequest): Promise<RegisterUserReponse> {
+    const allowedDomains = await settingService.getAllowedEmailDomains();
+
+    if (!isEmailDomainAllowed(data.email, allowedDomains)) {
+      throw new EmailDomainNotAllowedError(extractEmailDomain(data.email));
+    }
+
     const { roleId, roleName } = await this.resolveRoleAssigment(data.invitationCode);
 
     const hashedPassword = await bcrypt.hash(data.password, this.SALT_ROUNDS);

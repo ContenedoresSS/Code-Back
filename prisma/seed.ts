@@ -29,7 +29,7 @@ if (process.env.NODE_ENV !== "production") {
 // ==========================================
 
 async function seedRoles() {
-  console.log("\n[1/4] Verificando y creando Roles...");
+  console.log("\n[1/5] Verificando y creando Roles...");
   const roles = ["God", "Student", "Teacher"];
 
   for (const roleName of roles) {
@@ -43,7 +43,7 @@ async function seedRoles() {
 }
 
 async function seedUsers(hashedPassword: string) {
-  console.log("\n[2/4] Creando Usuarios por Defecto...");
+  console.log("\n[3/5] Creando Usuarios por Defecto...");
 
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@admin.com" },
@@ -87,8 +87,22 @@ async function seedUsers(hashedPassword: string) {
   return { adminUser, teacherUser, studentUser };
 }
 
+async function seedAppSettings() {
+  console.log("\n[2/5] Configurando ajustes por defecto...");
+
+  await prisma.appSetting.upsert({
+    where: { key: "allowedEmailDomains" },
+    update: {},
+    create: {
+      key: "allowedEmailDomains",
+      value: ["alumnos.uady.mx", "uady.mx"],
+    },
+  });
+  console.log("  ✔ Dominios de correo permitidos (alumnos.uady.mx, uady.mx).");
+}
+
 async function seedLanguages() {
-  console.log("\n[3/4] Registrando Lenguajes de Programación...");
+  console.log("\n[4/5] Registrando Lenguajes de Programación...");
 
   const languages = [
     {
@@ -136,7 +150,7 @@ async function seedLanguages() {
 }
 
 async function seedSubjectsAndActivities(teacher: User, student: User) {
-  console.log("\n[4/4] Configurando Cursos, Inscripciones y Actividades...");
+  console.log("\n[5/5] Configurando Cursos, Inscripciones y Actividades...");
 
   const cppLang = await prisma.programmingLanguage.findUnique({
     where: { name_version: { name: "C++", version: "13.2" } },
@@ -224,6 +238,7 @@ async function main() {
 
   // Ejecutamos los módulos en orden
   await seedRoles();
+  await seedAppSettings();
   const { teacherUser, studentUser } = await seedUsers(hashedPassword);
   await seedLanguages();
   await seedSubjectsAndActivities(teacherUser, studentUser);
