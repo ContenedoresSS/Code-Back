@@ -6,6 +6,8 @@ import type { UpdateActivityRequest } from "../types/requests/update-activity-re
 import type { ActivityResponse } from "../types/responses/activity-response.model.js";
 import type { ActivitySummaryResponse } from "../types/responses/activity-summary-response.model.js";
 import type { StudentGradeResponse } from "../types/responses/student-grade-response.model.js";
+import type { SubmissionDetailResponse } from "../types/responses/submission-detail-response.model.js";
+import type { CodeFile } from "../types/models/execution/code-file.model.js";
 import type { PaginationData } from "../types/shared/pagination-data.shared.js";
 import type {
   StudentWorkspaceResponse,
@@ -331,6 +333,60 @@ export class ActivityService implements IActivityService {
         throw error;
       }
       throw new Error(`Error al listar las calificaciones: ${error.message}`);
+    }
+  }
+
+  public async getSubmissionDetail(
+    activityId: string,
+    submissionId: string,
+    userRole: UserRole,
+    userId: string
+  ): Promise<SubmissionDetailResponse> {
+    try {
+      const activity = await prisma.activity.findFirst({
+        where: { id: activityId },
+        include: { subject: { select: { userId: true } } },
+      });
+
+      if (!activity) {
+        throw new Error("Actividad no encontrada o no tienes permisos para acceder a ella.");
+      }
+
+      if (userRole !== UserRole.God && activity.subject.userId !== userId) {
+        throw new Error("No tienes permiso para ver este envío.");
+      }
+
+      const submission = await prisma.submission.findFirst({
+        where: { id: submissionId, activityId },
+      });
+
+      if (!submission) {
+        throw new Error("Envío no encontrado.");
+      }
+
+      return {
+        id: submission.id,
+        studentId: submission.studentId,
+        activityId: submission.activityId,
+        languageId: submission.languageId,
+        codeSnapshot: submission.codeSnapshot as unknown as CodeFile[],
+        finalGrade: submission.finalGrade !== null ? Number(submission.finalGrade) : null,
+        passedTests: submission.passedTests,
+        totalTests: submission.totalTests,
+        executionTimeMs: submission.executionTimeMs,
+        status: submission.status,
+        compilerOutput: submission.compilerOutput,
+        submittedAt: submission.submittedAt.toISOString(),
+      };
+    } catch (error: any) {
+      if (
+        error.message.includes("Actividad no encontrada") ||
+        error.message.includes("No tienes permiso para ver este envío") ||
+        error.message.includes("Envío no encontrado")
+      ) {
+        throw error;
+      }
+      throw new Error(`Error al obtener el detalle del envío: ${error.message}`);
     }
   }
 

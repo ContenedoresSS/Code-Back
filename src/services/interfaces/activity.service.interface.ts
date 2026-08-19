@@ -5,6 +5,7 @@ import type { ActivitySummaryResponse } from "../../types/responses/activity-sum
 import type { PaginationData } from "../../types/shared/pagination-data.shared.js";
 import type { StudentWorkspaceResponse } from "../../types/responses/student-workspace-response.js";
 import type { StudentGradeResponse } from "../../types/responses/student-grade-response.model.js";
+import type { SubmissionDetailResponse } from "../../types/responses/submission-detail-response.model.js";
 import { UserRole } from "../../types/enums/role.enum.js";
 
 export interface IActivityService {
@@ -36,4 +37,10 @@ export interface IActivityService {
     take: number,
     searchTerm?: string
   ): Promise<PaginationData<StudentGradeResponse>>;
+  getSubmissionDetail(
+    activityId: string,
+    submissionId: string,
+    userRole: UserRole,
+    userId: string
+  ): Promise<SubmissionDetailResponse>;
 }

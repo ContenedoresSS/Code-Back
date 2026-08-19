@@ -24,6 +24,7 @@ const { mockPrisma } = vi.hoisted(() => ({
     submission: {
       groupBy: vi.fn(),
       findMany: vi.fn(),
+      findFirst: vi.fn(),
     },
     $transaction: vi.fn(),
   },
@@ -649,6 +650,101 @@ describe("ActivityService", () => {
           }),
         })
       );
+    });
+  });
+
+  describe("getSubmissionDetail", () => {
+    const mockSubmission = {
+      id: "sub-1",
+      studentId: "s1",
+      activityId: "a1",
+      languageId: 1,
+      codeSnapshot: [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }],
+      finalGrade: 90,
+      passedTests: 9,
+      totalTests: 10,
+      executionTimeMs: 120,
+      status: "ACCEPTED",
+      compilerOutput: null,
+      submittedAt: new Date("2024-01-02"),
+    };
+
+    it("returns the full submission detail for the subject owner teacher", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "a1",
+        subject: { userId: "teacher-1" },
+      });
+      mockPrisma.submission.findFirst.mockResolvedValue(mockSubmission);
+
+      const result = await activityService.getSubmissionDetail(
+        "a1",
+        "sub-1",
+        UserRole.Teacher,
+        "teacher-1"
+      );
+
+      expect(result).toEqual({
+        id: "sub-1",
+        studentId: "s1",
+        activityId: "a1",
+        languageId: 1,
+        codeSnapshot: [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }],
+        finalGrade: 90,
+        passedTests: 9,
+        totalTests: 10,
+        executionTimeMs: 120,
+        status: "ACCEPTED",
+        compilerOutput: null,
+        submittedAt: "2024-01-02T00:00:00.000Z",
+      });
+    });
+
+    it("returns the detail for God even when not the owner", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "a1",
+        subject: { userId: "teacher-1" },
+      });
+      mockPrisma.submission.findFirst.mockResolvedValue(mockSubmission);
+
+      const result = await activityService.getSubmissionDetail(
+        "a1",
+        "sub-1",
+        UserRole.God,
+        "admin"
+      );
+
+      expect(result.id).toBe("sub-1");
+    });
+
+    it("throws forbidden when the teacher is not the subject owner", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "a1",
+        subject: { userId: "other-teacher" },
+      });
+
+      await expect(
+        activityService.getSubmissionDetail("a1", "sub-1", UserRole.Teacher, "teacher-1")
+      ).rejects.toThrow("No tienes permiso para ver este envío");
+    });
+
+    it("throws not found when the activity does not exist", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue(null);
+
+      await expect(
+        activityService.getSubmissionDetail("a1", "sub-1", UserRole.Teacher, "teacher-1")
+      ).rejects.toThrow("Actividad no encontrada o no tienes permisos para acceder a ella");
+    });
+
+    it("throws not found when the submission does not exist", async () => {
+      mockPrisma.activity.findFirst.mockResolvedValue({
+        id: "a1",
+        subject: { userId: "teacher-1" },
+      });
+      mockPrisma.submission.findFirst.mockResolvedValue(null);
+
+      await expect(
+        activityService.getSubmissionDetail("a1", "sub-999", UserRole.Teacher, "teacher-1")
+      ).rejects.toThrow("Envío no encontrado");
     });
   });
 });
