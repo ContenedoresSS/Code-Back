@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { Prisma } from "@prisma/client";
 import type { IEnrollmentService } from "./interfaces/enrollment.service.interface.js";
 import type { CreateEnrollmentRequest } from "../types/requests/create-enrollment-request.model.js";
 import type { EnrollmentResponse } from "../types/responses/enrollment-response.model.js";
@@ -30,16 +31,18 @@ export class EnrollmentService implements IEnrollmentService {
         ...enrollment,
         createdAt: enrollment.createdAt.toISOString(),
       };
-    } catch (error: any) {
-      if (error.message === "La materia no existe.") {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === "La materia no existe.") {
         throw error;
       }
 
-      if (error.code === "P2002") {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         throw new Error("Ya estas inscrito en esta materia.");
       }
 
-      throw new Error(`Error al inscribirse: ${error.message}`);
+      throw new Error(
+        `Error al inscribirse: ${error instanceof Error ? error.message : "error desconocido"}`
+      );
     }
   }
 
@@ -71,7 +74,7 @@ export class EnrollmentService implements IEnrollmentService {
         },
       };
 
-      const whereClause: any = {};
+      const whereClause: Prisma.EnrollmentWhereInput = {};
 
       if (isStudent) {
         whereClause.studentId = userId;
@@ -82,7 +85,6 @@ export class EnrollmentService implements IEnrollmentService {
       if (searchTerm) {
         if (isStudent) {
           whereClause.subject = {
-            ...(whereClause.subject || {}),
             name: { contains: searchTerm, mode: "insensitive" },
           };
         } else if (isTeacher) {
@@ -124,8 +126,10 @@ export class EnrollmentService implements IEnrollmentService {
         data: mappedEnrollments,
         totalCount,
       };
-    } catch (error: any) {
-      throw new Error(`Error al listar inscripciones: ${error.message}`);
+    } catch (error: unknown) {
+      throw new Error(
+        `Error al listar inscripciones: ${error instanceof Error ? error.message : "error desconocido"}`
+      );
     }
   }
 
@@ -153,14 +157,17 @@ export class EnrollmentService implements IEnrollmentService {
       await prisma.enrollment.delete({
         where: { id: enrollmentId },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (
-        error.message === "No tienes permiso para eliminar esta inscripcion." ||
-        error.message === "Inscripcion no encontrada."
+        error instanceof Error &&
+        (error.message === "No tienes permiso para eliminar esta inscripcion." ||
+          error.message === "Inscripcion no encontrada.")
       ) {
         throw error;
       }
-      throw new Error(`Error al desinscribir: ${error.message}`);
+      throw new Error(
+        `Error al desinscribir: ${error instanceof Error ? error.message : "error desconocido"}`
+      );
     }
   }
 }

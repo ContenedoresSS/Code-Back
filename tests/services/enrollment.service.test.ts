@@ -23,6 +23,7 @@ vi.mock("../../src/config/prisma.js", () => ({
 }));
 
 import enrollmentService from "../../src/services/enrollment.service.js";
+import { Prisma } from "@prisma/client";
 import { UserRole } from "../../src/types/enums/role.enum.js";
 
 describe("EnrollmentService", () => {
@@ -69,8 +70,10 @@ describe("EnrollmentService", () => {
       const mockSubject = { id: 1, name: "Mathematics" };
       mockPrisma.subject.findUnique.mockResolvedValue(mockSubject);
 
-      const prismaError = new Error("Unique constraint failed") as any;
-      prismaError.code = "P2002";
+      const prismaError = new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+        code: "P2002",
+        clientVersion: "test",
+      });
       mockPrisma.enrollment.create.mockRejectedValue(prismaError);
 
       await expect(enrollmentService.enrollStudent("student-1", { subjectId: 1 })).rejects.toThrow(
