@@ -659,6 +659,13 @@ describe("ActivityService", () => {
       studentId: "s1",
       activityId: "a1",
       languageId: 1,
+      language: {
+        id: 1,
+        name: "Python",
+        editorIdentifier: "python",
+        version: "3.11",
+        fileExtension: "py",
+      },
       codeSnapshot: [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }],
       finalGrade: 90,
       passedTests: 9,
@@ -687,7 +694,13 @@ describe("ActivityService", () => {
         id: "sub-1",
         studentId: "s1",
         activityId: "a1",
-        languageId: 1,
+        language: {
+          id: 1,
+          name: "Python",
+          editorIdentifier: "python",
+          version: "3.11",
+          fileExtension: "py",
+        },
         codeSnapshot: [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }],
         finalGrade: 90,
         passedTests: 9,
@@ -696,6 +709,20 @@ describe("ActivityService", () => {
         status: "ACCEPTED",
         compilerOutput: null,
         submittedAt: "2024-01-02T00:00:00.000Z",
+      });
+      expect(mockPrisma.submission.findFirst).toHaveBeenCalledWith({
+        where: { id: "sub-1", activityId: "a1" },
+        include: {
+          language: {
+            select: {
+              id: true,
+              name: true,
+              editorIdentifier: true,
+              version: true,
+              fileExtension: true,
+            },
+          },
+        },
       });
     });
 

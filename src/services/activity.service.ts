@@ -358,6 +358,17 @@ export class ActivityService implements IActivityService {
 
       const submission = await prisma.submission.findFirst({
         where: { id: submissionId, activityId },
+        include: {
+          language: {
+            select: {
+              id: true,
+              name: true,
+              editorIdentifier: true,
+              version: true,
+              fileExtension: true,
+            },
+          },
+        },
       });
 
       if (!submission) {
@@ -368,7 +379,13 @@ export class ActivityService implements IActivityService {
         id: submission.id,
         studentId: submission.studentId,
         activityId: submission.activityId,
-        languageId: submission.languageId,
+        language: {
+          id: submission.language.id,
+          name: submission.language.name,
+          editorIdentifier: submission.language.editorIdentifier,
+          version: submission.language.version,
+          fileExtension: submission.language.fileExtension,
+        },
         codeSnapshot: submission.codeSnapshot as unknown as CodeFile[],
         finalGrade: submission.finalGrade !== null ? Number(submission.finalGrade) : null,
         passedTests: submission.passedTests,
