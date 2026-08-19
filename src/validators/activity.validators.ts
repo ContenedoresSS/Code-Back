@@ -4,7 +4,7 @@ import { ACTIVITY_RULE_KEYS, type ActivityRuleKey } from "../config/activity-rul
 
 const codeFileSchema = z.object({
   name: z.string().min(1, "File name is required"),
-  content: z.string().refine(isBase64, "Content must be Base64 encoded"),
+  content: z.string().refine((v) => v === "" || isBase64(v), "Content must be Base64 encoded"),
 });
 
 const activityRuleShape = Object.fromEntries(
