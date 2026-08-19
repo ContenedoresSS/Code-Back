@@ -22,6 +22,18 @@ describe("Activity Validators", () => {
       expect(result.success).toBe(false);
     });
 
+    it("accepts a starterCode file with empty content", () => {
+      const result = createActivitySchema.safeParse({
+        ...validCreatePayload,
+        starterCode: [{ name: "main.py", content: "" }],
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.starterCode).toEqual([{ name: "main.py", content: "" }]);
+      }
+    });
+
     it("keeps a partial rules object as provided", () => {
       const result = createActivitySchema.safeParse({
         ...validCreatePayload,
