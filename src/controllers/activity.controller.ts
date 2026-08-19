@@ -147,6 +147,35 @@ class ActivityController {
     }
   }
 
+  public async getSubmissionDetail(req: Request, res: Response) {
+    try {
+      const activityId = parseStringParam(req.params.id, "ID de la actividad");
+      const submissionId = parseStringParam(req.params.submissionId, "ID del envío");
+      const userId = (req as any).user as string;
+      const userRole = (req as any).role;
+
+      const detail = await activityService.getSubmissionDetail(
+        activityId,
+        submissionId,
+        userRole,
+        userId
+      );
+
+      return res.status(200).json(detail);
+    } catch (error: any) {
+      if (
+        error.message.includes("Actividad no encontrada") ||
+        error.message.includes("Envío no encontrado")
+      ) {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error.message.includes("No tienes permiso para ver este envío")) {
+        return res.status(403).json({ error: error.message });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+  }
+
   public async getWorkspace(req: Request, res: Response) {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");

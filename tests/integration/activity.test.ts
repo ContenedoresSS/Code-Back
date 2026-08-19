@@ -469,4 +469,80 @@ describe("Integration: Activity Endpoints", () => {
       );
     });
   });
+
+  describe("GET /api/v1/activity/:id/submissions/:submissionId", () => {
+    const mockDetail = {
+      id: "sub-1",
+      studentId: "s1",
+      activityId: "1",
+      languageId: 1,
+      codeSnapshot: [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }],
+      finalGrade: 90,
+      passedTests: 9,
+      totalTests: 10,
+      executionTimeMs: 120,
+      status: "ACCEPTED",
+      compilerOutput: null,
+      submittedAt: "2024-01-02T00:00:00.000Z",
+    };
+
+    it("returns the submission detail for Teacher role", async () => {
+      mockedActivityService.getSubmissionDetail.mockResolvedValue(mockDetail);
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .get("/api/v1/activity/1/submissions/sub-1")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(mockDetail);
+      expect(mockedActivityService.getSubmissionDetail).toHaveBeenCalledWith(
+        "1",
+        "sub-1",
+        expect.any(String),
+        "teacher-1"
+      );
+    });
+
+    it("returns 401 when no token provided", async () => {
+      const response = await request(app).get("/api/v1/activity/1/submissions/sub-1");
+
+      expect(response.status).toBe(401);
+    });
+
+    it("returns 403 for Student role", async () => {
+      const token = generateStudentToken();
+      const response = await request(app)
+        .get("/api/v1/activity/1/submissions/sub-1")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(403);
+    });
+
+    it("returns 404 when the submission is not found", async () => {
+      mockedActivityService.getSubmissionDetail.mockRejectedValue(
+        new Error("Envío no encontrado.")
+      );
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .get("/api/v1/activity/1/submissions/sub-999")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(404);
+    });
+
+    it("returns 403 when the teacher is not the subject owner", async () => {
+      mockedActivityService.getSubmissionDetail.mockRejectedValue(
+        new Error("No tienes permiso para ver este envío.")
+      );
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .get("/api/v1/activity/1/submissions/sub-1")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(403);
+    });
+  });
 });

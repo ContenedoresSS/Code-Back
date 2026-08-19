@@ -1162,6 +1162,44 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /activity/{id}/submissions/{submissionId}:
+    parameters:
+      - $ref: "#/components/parameters/ActivityId"
+      - $ref: "#/components/parameters/SubmissionId"
+    get:
+      operationId: activityGetSubmissionDetail
+      tags: [Activity]
+      summary: Consultar el detalle completo de un envío (vista maestro)
+      description: |
+        Devuelve el detalle completo de un envío de un estudiante, incluyendo la
+        instantánea del código (`codeSnapshot`, contenido en Base64) y la salida
+        del compilador/errores (`compilerOutput`).
+
+        - Solo el profesor propietario de la materia de la actividad (o God).
+        - El `compilerOutput` solo tiene valor cuando el envío terminó en
+          `COMPILE_ERROR` o `RUNTIME_ERROR`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Detalle completo del envío
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: >
+            El usuario no es el profesor propietario de la materia a la que
+            pertenece la actividad, o su rol no está autorizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # ══════════════════════════════════════════════
   #  Test Case
   # ══════════════════════════════════════════════
@@ -1347,6 +1385,14 @@ components:
       schema:
         type: integer
       description: ID del caso de prueba
+    SubmissionId:
+      name: submissionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: UUID del envío
     EnrollmentId:
       name: id
       in: path
@@ -2473,6 +2519,56 @@ components:
         totalCount:
           type: integer
           description: Total de estudiantes con envíos disponibles
+
+    SubmissionDetail:
+      title: SubmissionDetail
+      description: Detalle completo de un envío (código, salida del compilador y resultados)
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único del envío
+        studentId:
+          type: string
+          format: uuid
+          description: ID del estudiante autor del envío
+        activityId:
+          type: string
+          format: uuid
+          description: ID de la actividad a la que pertenece el envío
+        languageId:
+          type: integer
+          description: ID del lenguaje de programación usado
+        codeSnapshot:
+          type: array
+          description: Instantánea del código enviado (contenido en Base64)
+          items:
+            $ref: "#/components/schemas/CodeFile"
+        finalGrade:
+          type: [number, "null"]
+          description: Calificación del envío (0-100)
+        passedTests:
+          type: integer
+          description: Casos de prueba aprobados
+        totalTests:
+          type: integer
+          description: Total de casos de prueba
+        executionTimeMs:
+          type: [integer, "null"]
+          description: Tiempo de ejecución en milisegundos
+        status:
+          type: string
+          description: Estado del envío
+        compilerOutput:
+          type: [string, "null"]
+          description: >
+            Salida del compilador/error de ejecución. Solo tiene valor cuando el
+            envío terminó en COMPILE_ERROR o RUNTIME_ERROR
+        submittedAt:
+          type: string
+          format: date-time
+          description: Fecha del envío
 
     # ── Test Case ──
     CreateTestCaseRequest:

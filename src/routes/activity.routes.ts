@@ -21,6 +21,7 @@ router.post("/", validate(createActivitySchema), activityController.create);
 router.get("/", activityController.getAll);
 router.get("/:id", activityController.getOne);
 router.get("/:id/grades", activityController.getGrades);
+router.get("/:id/submissions/:submissionId", activityController.getSubmissionDetail);
 router.put("/:id", validate(updateActivitySchema), activityController.update);
 router.delete("/:id", activityController.delete);
 
