@@ -56,6 +56,30 @@ describe("Integration: Subject Endpoints", () => {
       expect(response.body.data).toHaveLength(2);
     });
 
+    it("returns only enrolled subjects for Student role", async () => {
+      const mockSubjects = {
+        data: [{ id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null }],
+        totalCount: 1,
+      };
+
+      mockedSubjectService.getSubjects.mockResolvedValue(mockSubjects);
+
+      const token = generateStudentToken("student-1");
+      const response = await request(app)
+        .get("/api/v1/subject")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toHaveLength(1);
+      expect(mockedSubjectService.getSubjects).toHaveBeenCalledWith(
+        "student-1",
+        "Student",
+        0,
+        10,
+        undefined
+      );
+    });
+
     it("returns 401 when no token provided", async () => {
       const response = await request(app).get("/api/v1/subject");
 
