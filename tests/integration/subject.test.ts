@@ -303,4 +303,56 @@ describe("Integration: Subject Endpoints", () => {
       expect(response.status).toBe(204);
     });
   });
+
+  describe("POST /api/v1/subject/:id/duplicate", () => {
+    it("duplicates subject with activities and returns counts", async () => {
+      const mockDuplicate = {
+        subject: { id: 2, name: "Mathematics (copia)", userId: "teacher-1", imageUrl: null },
+        activitiesCloned: 2,
+        testCasesCloned: 4,
+      };
+      mockedSubjectService.duplicateSubject.mockResolvedValue(mockDuplicate);
+
+      const token = generateTeacherToken("teacher-1");
+      const response = await request(app)
+        .post("/api/v1/subject/1/duplicate")
+        .set("Authorization", `Bearer ${token}`)
+        .send({});
+
+      expect(response.status).toBe(201);
+      expect(response.body.subject.id).toBe(2);
+      expect(response.body.subject.name).toBe("Mathematics (copia)");
+      expect(response.body.activitiesCloned).toBe(2);
+      expect(response.body.testCasesCloned).toBe(4);
+      expect(mockedSubjectService.duplicateSubject).toHaveBeenCalledWith(
+        1,
+        "Teacher",
+        "teacher-1",
+        {}
+      );
+    });
+
+    it("returns 403 for Student role", async () => {
+      const token = generateStudentToken();
+      const response = await request(app)
+        .post("/api/v1/subject/1/duplicate")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(403);
+    });
+
+    it("returns 404 when subject not found", async () => {
+      mockedSubjectService.duplicateSubject.mockRejectedValue(
+        new Error("Materia no encontrada o no tienes permisos para acceder a ella.")
+      );
+
+      const token = generateTeacherToken();
+      const response = await request(app)
+        .post("/api/v1/subject/999/duplicate")
+        .set("Authorization", `Bearer ${token}`)
+        .send({});
+
+      expect(response.status).toBe(404);
+    });
+  });
 });

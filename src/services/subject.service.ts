@@ -1,8 +1,10 @@
 import prisma from "../config/prisma.js";
+import type { Prisma } from "@prisma/client";
 import type { ISubjectService } from "./interfaces/subject.service.interface.js";
 import type { CreateSubjectRequest } from "../types/requests/create-subject-request.model.js";
 import type { UpdateSubjectRequest } from "../types/requests/update-subject-request.model.js";
 import type { SubjectResponse } from "../types/responses/subject-reponse.model.js";
+import type { DuplicateSubjectResponse } from "../types/responses/duplicate-subject-response.model.js";
 import type { EnrolledStudentResponse } from "../types/responses/enrolled-student-response.model.js";
 import type { PaginationData } from "../types/shared/pagination-data.shared.js";
 import { UserRole } from "../types/enums/role.enum.js";
@@ -206,6 +208,68 @@ export class SubjectService implements ISubjectService {
         throw error;
       }
       throw new Error(`Error al listar alumnos: ${error.message}`);
+    }
+  }
+
+  public async duplicateSubject(
+    subjectId: number,
+    userRole: UserRole,
+    userId: string,
+    data: { name?: string }
+  ): Promise<DuplicateSubjectResponse> {
+    try {
+      const source = await this.getSubjectById(subjectId, userRole, userId);
+
+      const activities = await prisma.activity.findMany({
+        where: { subjectId },
+        include: { testCases: true },
+      });
+
+      const name = data.name?.trim() ? data.name.trim() : `${source.name} (copia)`;
+
+      const newSubject = await prisma.subject.create({
+        data: {
+          userId: source.userId,
+          name,
+          imageUrl: source.imageUrl ?? null,
+          activities: {
+            create: activities.map((activity) => ({
+              professorId: source.userId,
+              languageId: activity.languageId,
+              title: activity.title,
+              description: activity.description,
+              starterCode: activity.starterCode as unknown as Prisma.InputJsonValue,
+              maxAttempts: activity.maxAttempts,
+              rules: activity.rules as unknown as Prisma.InputJsonValue,
+              testCases: {
+                create: activity.testCases.map((testCase) => ({
+                  input: testCase.input,
+                  expectedOutput: testCase.expectedOutput,
+                  isHidden: testCase.isHidden,
+                })),
+              },
+            })),
+          },
+        },
+      });
+
+      const testCasesCloned = activities.reduce(
+        (total, activity) => total + activity.testCases.length,
+        0
+      );
+
+      return {
+        subject: newSubject,
+        activitiesCloned: activities.length,
+        testCasesCloned,
+      };
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes("Materia no encontrada")) {
+        throw error;
+      }
+      throw new Error(
+        `Error al duplicar la materia: ${error instanceof Error ? error.message : "error desconocido"}`
+      );
     }
   }
 }
