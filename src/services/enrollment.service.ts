@@ -43,6 +43,14 @@ export class EnrollmentService implements IEnrollmentService {
     }
   }
 
+  public async ensureEnrollment(studentId: string, subjectId: number): Promise<void> {
+    await prisma.enrollment.upsert({
+      where: { studentId_subjectId: { studentId, subjectId } },
+      update: {},
+      create: { studentId, subjectId },
+    });
+  }
+
   public async getEnrollments(
     userId: string,
     userRole: UserRole,

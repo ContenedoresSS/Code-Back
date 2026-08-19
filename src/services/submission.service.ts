@@ -3,6 +3,7 @@ import type { SubmissionResult } from "../types/responses/submission-result.resp
 import type { ISubmissionService } from "./interfaces/submission.service.interface.js";
 import prisma from "../config/prisma.js";
 import evaluationService from "./evaluation.service.js";
+import enrollmentService from "./enrollment.service.js";
 import { resolveActivityRules } from "../helpers/activity-rules.helper.js";
 import { QueueTimeoutError } from "../helpers/concurrency-limiter.helper.js";
 import {
@@ -99,6 +100,8 @@ export class SubmissionService implements ISubmissionService {
             throw new Error("Has alcanzado el límite máximo de intentos para esta actividad.");
           }
         }
+
+        await enrollmentService.ensureEnrollment(userId, activity.subjectId);
       }
 
       const evaluationResult = await evaluationService.evaluateSubmission(
