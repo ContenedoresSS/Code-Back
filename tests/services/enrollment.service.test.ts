@@ -9,6 +9,7 @@ const { mockPrisma } = vi.hoisted(() => ({
       findFirst: vi.fn(),
       delete: vi.fn(),
       count: vi.fn(),
+      upsert: vi.fn(),
     },
     subject: {
       findUnique: vi.fn(),
@@ -85,6 +86,28 @@ describe("EnrollmentService", () => {
       await expect(enrollmentService.enrollStudent("student-1", { subjectId: 1 })).rejects.toThrow(
         "Error al inscribirse: DB error"
       );
+    });
+  });
+
+  describe("ensureEnrollment", () => {
+    it("creates an enrollment when the student is not enrolled", async () => {
+      mockPrisma.enrollment.upsert.mockResolvedValue({});
+
+      await enrollmentService.ensureEnrollment("student-1", 1);
+
+      expect(mockPrisma.enrollment.upsert).toHaveBeenCalledWith({
+        where: { studentId_subjectId: { studentId: "student-1", subjectId: 1 } },
+        update: {},
+        create: { studentId: "student-1", subjectId: 1 },
+      });
+    });
+
+    it("is idempotent when the student is already enrolled", async () => {
+      mockPrisma.enrollment.upsert.mockResolvedValue({ id: "enroll-1" });
+
+      await expect(enrollmentService.ensureEnrollment("student-1", 1)).resolves.toBeUndefined();
+
+      expect(mockPrisma.enrollment.upsert).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -25,11 +25,19 @@ vi.mock("../../src/services/evaluation.service.js", () => ({
   },
 }));
 
+vi.mock("../../src/services/enrollment.service.js", () => ({
+  default: {
+    ensureEnrollment: vi.fn(),
+  },
+}));
+
 import submissionService from "../../src/services/submission.service.js";
 import evaluationService from "../../src/services/evaluation.service.js";
+import enrollmentService from "../../src/services/enrollment.service.js";
 import { SubmissionStatus } from "../../src/types/enums/submission-status.enum.js";
 
 const mockedEvaluationService = vi.mocked(evaluationService);
+const mockedEnrollmentService = vi.mocked(enrollmentService);
 
 describe("SubmissionService", () => {
   const mockFiles = [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }];
@@ -111,7 +119,55 @@ describe("SubmissionService", () => {
 
       expect(mockPrisma.submission.count).not.toHaveBeenCalled();
       expect(mockPrisma.submission.create).not.toHaveBeenCalled();
+      expect(mockedEnrollmentService.ensureEnrollment).not.toHaveBeenCalled();
       expect(result).toEqual({ ...mockEvaluationResult, saved: false });
+    });
+
+    it("auto-enrolls the student in the activity's subject", async () => {
+      const mockActivity = {
+        id: "1",
+        subjectId: 42,
+        languageId: 1,
+        maxAttempts: 0,
+        testCases: [],
+      };
+      const mockEvaluationResult = {
+        status: SubmissionStatus.ACCEPTED,
+        finalGrade: 100,
+        passedTests: 1,
+        totalTests: 1,
+        executionTimeMs: 100,
+        compilerOutput: null,
+        languageId: 1,
+      };
+
+      mockPrisma.activity.findUnique.mockResolvedValue(mockActivity);
+      mockedEvaluationService.evaluateSubmission.mockResolvedValue(mockEvaluationResult);
+      mockPrisma.submission.create.mockResolvedValue({});
+      mockedEnrollmentService.ensureEnrollment.mockResolvedValue();
+
+      await submissionService.processSubmission("1", mockFiles, "student-1");
+
+      expect(mockedEnrollmentService.ensureEnrollment).toHaveBeenCalledWith("student-1", 42);
+    });
+
+    it("does not auto-enroll when max attempts are reached", async () => {
+      const mockActivity = {
+        id: "1",
+        subjectId: 42,
+        languageId: 1,
+        maxAttempts: 1,
+        testCases: [],
+      };
+
+      mockPrisma.activity.findUnique.mockResolvedValue(mockActivity);
+      mockPrisma.submission.count.mockResolvedValue(1);
+
+      await expect(
+        submissionService.processSubmission("1", mockFiles, "student-1")
+      ).rejects.toThrow("Has alcanzado el l");
+
+      expect(mockedEnrollmentService.ensureEnrollment).not.toHaveBeenCalled();
     });
 
     it("throws error when activity not found", async () => {

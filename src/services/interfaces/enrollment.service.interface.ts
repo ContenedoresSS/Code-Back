@@ -13,4 +13,5 @@ export interface IEnrollmentService {
     searchTerm?: string
   ): Promise<PaginationData<EnrollmentResponse>>;
   unenroll(enrollmentId: string, userId: string, userRole: UserRole): Promise<void>;
+  ensureEnrollment(studentId: string, subjectId: number): Promise<void>;
 }
