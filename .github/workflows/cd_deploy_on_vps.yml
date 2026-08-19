@@ -1,11 +1,15 @@
 name: CD - Deploy to VPS
 
-on:
-  workflow_run:
-    workflows: ["CI - Build and Publish"]
-    types:
-      - completed
-  workflow_dispatch:
+# ⚠️ TEMPORALMENTE DESACTIVADO (hotfix 2026-08-19)
+# El servidor VPS está en pausa por cuestiones de negocio.
+# Para re-activar, descomenta el bloque `on:` de abajo.
+#
+# on:
+#   workflow_run:
+#     workflows: ["CI - Build and Publish"]
+#     types:
+#       - completed
+#   workflow_dispatch:
 
 permissions:
   deployments: write
