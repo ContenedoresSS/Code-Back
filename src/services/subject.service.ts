@@ -35,11 +35,19 @@ export class SubjectService implements ISubjectService {
   ): Promise<PaginationData<SubjectResponse>> {
     try {
       const isTeacher = userRole === UserRole.Teacher;
+      const isStudent = userRole === UserRole.Student;
 
-      const whereClause: any = {
-        ...(isTeacher ? { userId } : {}),
-        ...(searchTerm ? { name: { contains: searchTerm, mode: "insensitive" } } : {}),
-      };
+      const whereClause: Prisma.SubjectWhereInput = {};
+
+      if (isTeacher) {
+        whereClause.userId = userId;
+      } else if (isStudent) {
+        whereClause.enrollments = { some: { studentId: userId } };
+      }
+
+      if (searchTerm) {
+        whereClause.name = { contains: searchTerm, mode: "insensitive" };
+      }
 
       const [subjects, totalCount] = await prisma.$transaction([
         prisma.subject.findMany({

@@ -141,6 +141,29 @@ describe("SubjectService", () => {
       });
     });
 
+    it("returns only enrolled subjects for Student role", async () => {
+      const mockSubjects = [{ id: 1, name: "Math", professor: { name: "John", lastName: "Doe" } }];
+      mockPrisma.subject.findMany.mockResolvedValue(mockSubjects);
+      mockPrisma.subject.count.mockResolvedValue(1);
+      mockPrisma.$transaction.mockImplementation(async (queries) => {
+        return Promise.all(queries);
+      });
+
+      await subjectService.getSubjects("student-1", UserRole.Student, 0, 10);
+
+      expect(mockPrisma.subject.findMany).toHaveBeenCalledWith({
+        where: { enrollments: { some: { studentId: "student-1" } } },
+        skip: 0,
+        take: 10,
+        orderBy: { id: "desc" },
+        include: {
+          professor: {
+            select: { name: true, lastName: true },
+          },
+        },
+      });
+    });
+
     it("filters subjects by search term", async () => {
       const mockSubjects = [
         { id: 1, name: "Mathematics", professor: { name: "John", lastName: "Doe" } },

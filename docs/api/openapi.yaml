@@ -728,7 +728,8 @@ paths:
       tags: [Subject]
       summary: Listar materias
       description: |
-        Teachers ven solo sus materias. God ve todas.
+        Teachers ven solo sus materias, Students ven solo las materias a las
+        que están inscritos, God ve todas.
       parameters:
         - $ref: "#/components/parameters/Skip"
         - $ref: "#/components/parameters/Take"
