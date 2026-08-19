@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.23-alpha] - 2026-08-19
+
+### Added
+- Submission detail endpoint with code snapshot and compiler output (GET /activity/:id/submissions/:submissionId)
+- Automatic enrollment of a student in the activity's subject when they submit, without blocking the submission
+- Admin-only settings to restrict registration email domains
+- Execution sandbox hardening with configurable limits: read-only rootfs, no-new-privileges and container auto-removal via new EXECUTION_* environment variables (closes DEBT-01)
+- Concurrency limiter for code execution with a FIFO queue and configurable timeout (EXECUTION_MAX_CONCURRENCY, EXECUTION_QUEUE_TIMEOUT_MS), mapped to HTTP 429 on run and submit endpoints (closes DEBT-02)
+- Request input size validation: MAX_REQUEST_BODY cap with 413 response, plus per-file code and stdin size limits (EXECUTION_MAX_CODE_BYTES, EXECUTION_MAX_STDIN_BYTES) returning 400 (closes DEBT-03)
+
+### Changed
+- Refactored enrollment and submission services to remove `any` and type catch blocks (`unknown` + narrowing)
+- Grouped environment variable schema into typed sections with helpers
+- Made the seed script more readable and data-driven
+
+### Fixed
+- Activity validation now allows empty starter code file content
+
+### Docs
+- Added technical debt summary dashboard to DEBT.md (31 items with status per pillar)
+
 ## [0.0.22-alpha] - 2026-08-15
 
 ### Added
@@ -219,7 +240,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup
 - First commit
 
-[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.22-alpha...HEAD
+[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.23-alpha...HEAD
+[0.0.23-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.22-alpha...v0.0.23-alpha
 [0.0.22-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.21-alpha...v0.0.22-alpha
 [0.0.21-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.20-alpha...v0.0.21-alpha
 [0.0.20-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.19-alpha...v0.0.20-alpha
