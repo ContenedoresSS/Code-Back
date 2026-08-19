@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.25-alpha] - 2026-08-19
+
+### Fixed
+- Code execution no longer fails with "container rootfs is marked read-only": the Docker sandbox now mounts writable tmpfs for `/app` (working dir, with exec) and `/tmp` while keeping the root filesystem read-only
+- CORS options extracted to a reusable helper (`buildCorsOptions`) and the CORS test rewritten to test it directly, fixing the slow full-app import that made the test time out
+
 ## [0.0.24-alpha] - 2026-08-19
 
 ### Added
@@ -255,7 +261,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup
 - First commit
 
-[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.24-alpha...HEAD
+[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.25-alpha...HEAD
+[0.0.25-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.24-alpha...v0.0.25-alpha
 [0.0.24-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.23-alpha...v0.0.24-alpha
 [0.0.23-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.22-alpha...v0.0.23-alpha
 [0.0.22-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.21-alpha...v0.0.22-alpha
