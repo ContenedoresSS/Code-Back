@@ -2,6 +2,7 @@ import type { UserRole } from "../../types/enums/role.enum.js";
 import type { CreateSubjectRequest } from "../../types/requests/create-subject-request.model.js";
 import type { UpdateSubjectRequest } from "../../types/requests/update-subject-request.model.js";
 import type { SubjectResponse } from "../../types/responses/subject-reponse.model.js";
+import type { DuplicateSubjectResponse } from "../../types/responses/duplicate-subject-response.model.js";
 import type { EnrolledStudentResponse } from "../../types/responses/enrolled-student-response.model.js";
 import type { PaginationData } from "../../types/shared/pagination-data.shared.js";
 
@@ -54,4 +55,15 @@ export interface ISubjectService {
     take: number,
     searchTerm?: string
   ): Promise<PaginationData<EnrolledStudentResponse>>;
+
+  /**
+   * Duplica una materia clonando sus actividades y casos de prueba.
+   * No clona inscripciones ni envíos.
+   */
+  duplicateSubject(
+    subjectId: number,
+    userRole: UserRole,
+    userId: string,
+    data: { name?: string }
+  ): Promise<DuplicateSubjectResponse>;
 }

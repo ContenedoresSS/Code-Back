@@ -14,6 +14,9 @@ const { mockPrisma } = vi.hoisted(() => ({
       findMany: vi.fn(),
       count: vi.fn(),
     },
+    activity: {
+      findMany: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
@@ -360,6 +363,150 @@ describe("SubjectService", () => {
 
       await expect(
         subjectService.getStudentsBySubject(1, UserRole.Teacher, "other-teacher", 0, 10)
+      ).rejects.toThrow("Materia no encontrada o no tienes permisos para acceder a ella.");
+    });
+  });
+
+  describe("duplicateSubject", () => {
+    const sourceSubject = {
+      id: 1,
+      name: "Mathematics",
+      userId: "teacher-1",
+      imageUrl: null,
+    };
+
+    const sourceActivities = [
+      {
+        id: "a1",
+        professorId: "teacher-1",
+        languageId: 1,
+        subjectId: 1,
+        title: "Suma",
+        description: "Sumar dos números",
+        starterCode: [{ name: "main.py", content: "cA==" }],
+        maxAttempts: 3,
+        rules: { allowCodeEdit: true },
+        testCases: [
+          { id: 1, input: "1 2", expectedOutput: "3", isHidden: false },
+          { id: 2, input: "5 5", expectedOutput: "10", isHidden: true },
+        ],
+      },
+      {
+        id: "a2",
+        professorId: "teacher-1",
+        languageId: 1,
+        subjectId: 1,
+        title: "Resta",
+        description: null,
+        starterCode: null,
+        maxAttempts: 0,
+        rules: null,
+        testCases: [],
+      },
+    ];
+
+    const clonedSubject = {
+      id: 2,
+      name: "Mathematics (copia)",
+      userId: "teacher-1",
+      imageUrl: null,
+    };
+
+    it("clones subject with activities and test cases using default name", async () => {
+      mockPrisma.subject.findFirst.mockResolvedValue(sourceSubject);
+      mockPrisma.activity.findMany.mockResolvedValue(sourceActivities);
+      mockPrisma.subject.create.mockResolvedValue(clonedSubject);
+
+      const result = await subjectService.duplicateSubject(1, UserRole.Teacher, "teacher-1", {});
+
+      expect(mockPrisma.subject.findFirst).toHaveBeenCalledWith({
+        where: { id: 1, userId: "teacher-1" },
+      });
+      expect(mockPrisma.activity.findMany).toHaveBeenCalledWith({
+        where: { subjectId: 1 },
+        include: { testCases: true },
+      });
+      expect(mockPrisma.subject.create).toHaveBeenCalledWith({
+        data: {
+          userId: "teacher-1",
+          name: "Mathematics (copia)",
+          imageUrl: null,
+          activities: {
+            create: [
+              {
+                professorId: "teacher-1",
+                languageId: 1,
+                title: "Suma",
+                description: "Sumar dos números",
+                starterCode: [{ name: "main.py", content: "cA==" }],
+                maxAttempts: 3,
+                rules: { allowCodeEdit: true },
+                testCases: {
+                  create: [
+                    { input: "1 2", expectedOutput: "3", isHidden: false },
+                    { input: "5 5", expectedOutput: "10", isHidden: true },
+                  ],
+                },
+              },
+              {
+                professorId: "teacher-1",
+                languageId: 1,
+                title: "Resta",
+                description: null,
+                starterCode: null,
+                maxAttempts: 0,
+                rules: null,
+                testCases: { create: [] },
+              },
+            ],
+          },
+        },
+      });
+      expect(result).toEqual({
+        subject: clonedSubject,
+        activitiesCloned: 2,
+        testCasesCloned: 2,
+      });
+    });
+
+    it("uses a custom name when provided", async () => {
+      mockPrisma.subject.findFirst.mockResolvedValue(sourceSubject);
+      mockPrisma.activity.findMany.mockResolvedValue([]);
+      mockPrisma.subject.create.mockResolvedValue({
+        ...clonedSubject,
+        name: "Matemáticas 2026",
+      });
+
+      const result = await subjectService.duplicateSubject(1, UserRole.Teacher, "teacher-1", {
+        name: "Matemáticas 2026",
+      });
+
+      expect(mockPrisma.subject.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ name: "Matemáticas 2026" }),
+        })
+      );
+      expect(result.subject.name).toBe("Matemáticas 2026");
+    });
+
+    it("allows God role to duplicate any subject keeping the owner", async () => {
+      mockPrisma.subject.findFirst.mockResolvedValue(sourceSubject);
+      mockPrisma.activity.findMany.mockResolvedValue([]);
+      mockPrisma.subject.create.mockResolvedValue(clonedSubject);
+
+      await subjectService.duplicateSubject(1, UserRole.God, "god-1", {});
+
+      expect(mockPrisma.subject.findFirst).toHaveBeenCalledWith({ where: { id: 1 } });
+      expect(mockPrisma.subject.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ userId: "teacher-1" }),
+      });
+    });
+
+    it("throws error when the subject is not found", async () => {
+      mockPrisma.subject.findFirst.mockResolvedValue(null);
+
+      await expect(
+        subjectService.duplicateSubject(999, UserRole.Teacher, "teacher-1", {})
       ).rejects.toThrow("Materia no encontrada o no tienes permisos para acceder a ella.");
     });
   });

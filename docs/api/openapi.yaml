@@ -828,6 +828,39 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /subject/{id}/duplicate:
+    parameters:
+      - $ref: "#/components/parameters/SubjectId"
+    post:
+      operationId: subjectDuplicate
+      tags: [Subject]
+      summary: Duplicar una materia
+      description: |
+        Clona una materia junto con sus actividades y casos de prueba
+        (para un nuevo periodo escolar). No clona inscripciones ni envíos.
+        Solo el profesor propietario de la materia (o God) puede duplicarla.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DuplicateSubjectRequest"
+      responses:
+        "201":
+          description: Materia duplicada con conteo de clonados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicateSubjectResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   # ══════════════════════════════════════════════
   #  Enrollment
   # ══════════════════════════════════════════════
@@ -2126,6 +2159,29 @@ components:
         totalCount:
           type: integer
           description: Total de registros disponibles
+
+    DuplicateSubjectRequest:
+      title: DuplicateSubjectRequest
+      description: Datos para duplicar una materia
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre opcional para la materia duplicada (default "<original> (copia)")
+
+    DuplicateSubjectResponse:
+      title: DuplicateSubjectResponse
+      description: Resultado de duplicar una materia
+      type: object
+      properties:
+        subject:
+          $ref: "#/components/schemas/Subject"
+        activitiesCloned:
+          type: integer
+          description: Cantidad de actividades clonadas
+        testCasesCloned:
+          type: integer
+          description: Cantidad de casos de prueba clonados
 
     # ── Enrollment ──
     CreateEnrollmentRequest:

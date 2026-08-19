@@ -137,6 +137,29 @@ class SubjectController {
       return res.status(400).json({ error: error.message });
     }
   }
+
+  public async duplicate(req: Request, res: Response) {
+    try {
+      const subjectId = parseIdParam(req.params.id);
+      const userId = req.user as string;
+      const userRole = req.role as UserRole;
+      const data: { name?: string } = req.body;
+
+      if (isNaN(subjectId)) {
+        return res.status(400).json({ error: "El ID proporcionado no es válido." });
+      }
+
+      const duplicated = await subjectService.duplicateSubject(subjectId, userRole, userId, data);
+      return res.status(201).json(duplicated);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes("Materia no encontrada")) {
+        return res.status(404).json({ error: error.message });
+      }
+      return res.status(400).json({
+        error: error instanceof Error ? error.message : "Error al duplicar la materia.",
+      });
+    }
+  }
 }
 
 export default new SubjectController();

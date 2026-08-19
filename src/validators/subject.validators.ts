@@ -22,3 +22,11 @@ export const updateSubjectSchema = z.object({
     .nullable()
     .optional(),
 });
+
+export const duplicateSubjectSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name cannot be empty")
+    .max(200, "Name must be 200 characters or less")
+    .optional(),
+});
