@@ -9,6 +9,7 @@ Sistema de ejecución remota de código y calificación automática, embebido en
 - Ejecuta código de estudiantes en contenedores Docker efímeros con sandboxing estricto
 - Evalúa automáticamente las soluciones contra casos de prueba (públicos y ocultos)
 - Gestiona materias, actividades de programación, entregas y calificaciones
+- Inscribe automáticamente al alumno en la materia al contestar una actividad
 - Tres roles: **God** (admin), **Teacher** (profesor), **Student** (alumno)
 
 ---
@@ -53,6 +54,19 @@ DATABASE_URL="postgresql://user:pass@host:5432/db?sslmode=require"
 JWT_SECRET=<mínimo 20 caracteres>
 JWT_REFRESH_SECRET=<mínimo 20 caracteres>
 NODE_ENV=development
+
+# Ejecución (todos opcionales)
+MAX_REQUEST_BODY=1mb
+EXECUTION_MAX_CONCURRENCY=5
+EXECUTION_QUEUE_TIMEOUT_MS=30000
+EXECUTION_MAX_CODE_BYTES=262144
+EXECUTION_MAX_STDIN_BYTES=65536
+EXECUTION_MEMORY_MB=128
+EXECUTION_CPU_QUOTA=50000
+EXECUTION_PIDS_LIMIT=30
+EXECUTION_AUTO_REMOVE=true
+EXECUTION_READONLY_ROOTFS=true
+EXECUTION_NO_NEW_PRIVILEGES=true
 ```
 
 ### Comandos
@@ -75,7 +89,7 @@ NODE_ENV=development
 src/
 ├── app.ts              # Punto de entrada
 ├── config/             # env (Zod) + Prisma singleton
-├── controllers/        # Request/response (9 controladores)
+├── controllers/        # Request/response (12 controladores)
 ├── services/           # Lógica de negocio
 │   ├── execution.service.ts   # Motor de ejecución con Docker
 │   ├── evaluation.service.ts  # Motor de calificación automática
@@ -113,6 +127,8 @@ src/
 | DELETE | `/activity/:id` | Teacher | Eliminar actividad |
 | GET | `/activity/:id/workspace` | — | Workspace del estudiante |
 | POST | `/activity/:id/submit` | Opcional + rate‑limited | Enviar solución |
+| GET | `/activity/:id/grades` | Teacher | Calificaciones por actividad |
+| GET | `/activity/:id/submissions/:submissionId` | Teacher | Detalle de envío (snapshot + compiler output) |
 | GET | `/activity/:id/test-case` | Teacher | Listar casos de prueba |
 | POST | `/activity/:id/test-case` | Teacher | Crear caso de prueba |
 | PUT | `/activity/:id/test-case/:testCaseId` | Teacher | Actualizar caso |
@@ -126,22 +142,30 @@ src/
 | `/programming-language` | God | Lenguajes de programación (CRUD) |
 | `/user` | Bearer | Perfil, actualizar, cambiar contraseña |
 | `/subject` | Teacher | Materias (CRUD) |
+| `/subject/:id/students` | Teacher | Alumnos inscritos en una materia |
+| `/enrollment` | Student / Teacher | Inscripción a materias (inscribirse, listar, desinscribir) |
+| `/settings` | God | Configuración global (dominios de email permitidos) |
 
 ---
 
 ## Motor de ejecución
 
 1. Recibe archivos de código codificados en Base64
-2. Busca el lenguaje en BD (imagen Docker + comando de ejecución)
-3. Crea un contenedor efímero con restricciones estrictas:
-   - 128 MB RAM, sin swap
-   - CPU quota 50000
-   - PID limit 30
+2. Valida el tamaño de la petición (body, código por archivo y stdin)
+3. Busca el lenguaje en BD (imagen Docker + comando de ejecución)
+4. Encola la ejecución en una cola FIFO con límite de concurrencia configurable
+5. Crea un contenedor efímero con restricciones estrictas configurables vía `EXECUTION_*`:
+   - Límite de memoria y CPU
+   - PID limit
    - Red deshabilitada
-   - Timeout de 10 segundos
-4. Transfiere los archivos vía tar stream al contenedor
-5. Ejecuta, captura stdout/stderr, destruye el contenedor
-6. Retorna resultado con status, output y tiempo de ejecución
+   - Timeout de ejecución
+   - Read‑only rootfs y `no-new-privileges` por defecto
+   - Auto‑removido al terminar
+6. Transfiere los archivos vía tar stream al contenedor
+7. Ejecuta, captura stdout/stderr, destruye el contenedor
+8. Retorna resultado con status, output y tiempo de ejecución
+
+> Bajo demanda (cola llena) el endpoint responde `429` en lugar de bloquear el proceso.
 
 Lenguajes soportados: **C++** (gcc 13.2), **Python** (3.11), **Node.js** (20), **Java** (openjdk 21).
 
