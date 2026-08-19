@@ -1,6 +1,7 @@
 import type { CodeFile } from "../types/models/execution/code-file.model.js";
 import type { SubmissionResult } from "../types/responses/submission-result.response.js";
 import type { ISubmissionService } from "./interfaces/submission.service.interface.js";
+import type { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
 import evaluationService from "./evaluation.service.js";
 import enrollmentService from "./enrollment.service.js";
@@ -117,7 +118,7 @@ export class SubmissionService implements ISubmissionService {
             studentId: userId,
             activityId: activityId,
             languageId: evaluationResult.languageId,
-            codeSnapshot: files as any,
+            codeSnapshot: files as unknown as Prisma.InputJsonValue,
             finalGrade: evaluationResult.finalGrade,
             passedTests: evaluationResult.passedTests,
             totalTests: evaluationResult.totalTests,
@@ -132,16 +133,19 @@ export class SubmissionService implements ISubmissionService {
         ...evaluationResult,
         saved: userId !== undefined,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof QueueTimeoutError) throw error;
-      if (
-        error.message.includes("límite máximo") ||
-        error.message.includes("no existe") ||
-        error.message.includes("no permite")
-      ) {
-        throw error;
+      if (error instanceof Error) {
+        if (
+          error.message.includes("límite máximo") ||
+          error.message.includes("no existe") ||
+          error.message.includes("no permite")
+        ) {
+          throw error;
+        }
+        throw new Error(`Error al procesar el envío: ${error.message}`);
       }
-      throw new Error(`Error al procesar el envío: ${error.message}`);
+      throw new Error("Error al procesar el envío: error desconocido");
     }
   }
 }
