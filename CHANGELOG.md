@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.24-alpha] - 2026-08-19
+
+### Added
+- Endpoint to duplicate a subject with its activities and test cases for a new school period (POST /subject/:id/duplicate), without cloning enrollments or submissions
+
+### Changed
+- Submission detail endpoint now returns the full `language` object (id, name, editorIdentifier, version, fileExtension) instead of just `languageId`
+- Production server URL updated to https://code.oryondev.duckdns.org
+
+### Fixed
+- Student subject list (GET /subject) now only returns the subjects the student is enrolled in, instead of all subjects
+
+### Infrastructure
+- VPS deploy pipeline temporarily disabled while the server is paused
+
 ## [0.0.23-alpha] - 2026-08-19
 
 ### Added
@@ -240,7 +255,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup
 - First commit
 
-[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.23-alpha...HEAD
+[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.24-alpha...HEAD
+[0.0.24-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.23-alpha...v0.0.24-alpha
 [0.0.23-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.22-alpha...v0.0.23-alpha
 [0.0.22-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.21-alpha...v0.0.22-alpha
 [0.0.21-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.20-alpha...v0.0.21-alpha
