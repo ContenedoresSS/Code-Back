@@ -127,6 +127,10 @@ class ExecutionService implements IExecutionService {
       PidsLimit: ENV.EXECUTION_PIDS_LIMIT,
       AutoRemove: ENV.EXECUTION_AUTO_REMOVE,
       ReadonlyRootfs: ENV.EXECUTION_READONLY_ROOTFS,
+      Tmpfs: {
+        "/app": "rw,exec,nosuid,size=64m",
+        "/tmp": "rw,noexec,nosuid,size=64m",
+      },
       ...(ENV.EXECUTION_NO_NEW_PRIVILEGES ? { SecurityOpt: ["no-new-privileges:true"] } : {}),
     };
   }

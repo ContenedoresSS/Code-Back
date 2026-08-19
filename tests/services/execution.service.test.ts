@@ -118,6 +118,10 @@ describe("ExecutionService", () => {
             PidsLimit: 50,
             AutoRemove: false,
             ReadonlyRootfs: false,
+            Tmpfs: {
+              "/app": "rw,exec,nosuid,size=64m",
+              "/tmp": "rw,noexec,nosuid,size=64m",
+            },
           }),
         })
       );
