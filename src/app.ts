@@ -5,22 +5,11 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import v1Routes from "./routes/index-v1.routes.js";
 import { payloadTooLargeErrorHandler } from "./middlewares/body-size-error.middleware.js";
+import { buildCorsOptions } from "./helpers/cors.helper.js";
 
 const PORT = ENV.PORT;
 
-const whiteList = ENV.corsOrigins;
-
-export const corsOptions: CorsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || whiteList.includes(origin) || whiteList.includes("*")) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  methods: ["GET", "POST", "PATCH", "DELETE", "PUT"],
-  credentials: true,
-};
+export const corsOptions: CorsOptions = buildCorsOptions(ENV.corsOrigins);
 
 const app = express();
 app.use(cors(corsOptions));
