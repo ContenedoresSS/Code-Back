@@ -39,8 +39,9 @@ Leyenda: ✅ Resuelto · 🔶 Parcial · ⏳ Abierta.
 | 28 | VPS no usa compose.prod.yaml | 12 | ⏳ Abierta | — |
 | 30 | Rollback automático del deploy roto | 12 | ⏳ Abierta | — |
 | 29 | Subida directa de imágenes | 13 | ⏳ Abierta | — |
+| 32 | Respuesta de registro declara `username` inexistente | 5 | ⏳ Abierta | — |
 
-**Resumen**: 31 deudas · 7 ✅ resueltas · 1 🔶 parcial (01) · 23 ⏳ abiertas.
+**Resumen**: 32 deudas · 7 ✅ resueltas · 1 🔶 parcial (01) · 24 ⏳ abiertas.
 
 ---
 
@@ -306,6 +307,14 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 - **Problema**: El seed replica la lógica del singleton de PrismaClient en vez de importarla. Si cambia la configuración de Prisma, hay que acordarse de cambiar dos archivos.
 - **Recomendación**: El seed debe importar `prisma` desde `src/config/prisma.ts` (ajustando el path relativo).
 
+### DEBT‑32: La respuesta de registro declara `username` que no existe en la BD
+
+- **Archivos**: `src/types/responses/register-user-response.model.ts`, `src/services/auth.service.ts` (método `register`)
+- **Problema**: `RegisterUserReponse` declara `username: string`, pero el modelo `User` no tiene columna `username` (solo `identifier`). En producción `newUser.username` siempre es `undefined`; el valor solo aparece en los tests porque los mocks lo incluyen. Detectado al tipar `IUserService.create` con tipos reales de Prisma durante la migración a DI (DEBT‑04).
+- **Impacto**: Contrato de respuesta incoherente. El frontend podría estar leyendo `username` siempre `undefined`, o estar usando `identifier` por otro camino.
+- **Mitigación aplicada** (en `feat/dependency-injection-awilix`): `username` quedó opcional en el tipo y se omite del JSON si no existe (spread condicional), sin cambiar runtime.
+- **Pendiente — decisión de negocio**: o mapear `username` a `identifier`, o eliminar el campo de la respuesta y actualizar el frontend.
+
 ---
 
 ## Pilar 6 — Observabilidad
@@ -525,4 +534,5 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 | **Media** | 28 | CI/CD | Configurar VPS para usar compose.prod.yaml |
 | **Media** | 29 | Archivos | Implementar subida directa de imágenes para materias |
 | **Baja** | 18, 22, 23 | DX | Organizar tipos, CORS en env |
+| **Baja** | 32 | Contrato | Decidir: mapear `username` a `identifier` o eliminar el campo |
 | **Seguimiento** | 27 | OpenAPI | Migrar a zod-to-openapi cuando se implemente DEBT‑08 |
