@@ -1,12 +1,17 @@
 import { Router } from "express";
-import activityController from "../controllers/activity.controller.js";
-import { authenticate, optionalAuthenticate } from "../middlewares/auth.middleware.js";
-import { rbac } from "../middlewares/rbac.middleware.js";
+import { container } from "../config/container.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { createActivitySchema, updateActivitySchema } from "../validators/activity.validators.js";
 import { UserRole } from "../types/enums/role.enum.js";
-import testCaseController from "../controllers/test-case.controller.js";
-import submissionController from "../controllers/submission.controller.js";
+
+const {
+  activityController,
+  testCaseController,
+  submissionController,
+  authenticate,
+  optionalAuthenticate,
+  rbac,
+} = container.cradle;
 
 const router = Router();
 

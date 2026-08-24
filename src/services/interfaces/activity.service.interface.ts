@@ -19,7 +19,8 @@ export interface IActivityService {
     userId: string,
     userRole: UserRole,
     skip: number,
-    take: number
+    take: number,
+    subjectId?: number
   ): Promise<PaginationData<ActivitySummaryResponse>>;
   updateActivity(
     activityId: string,

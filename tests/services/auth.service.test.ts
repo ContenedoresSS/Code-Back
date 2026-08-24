@@ -23,45 +23,53 @@ vi.mock("bcrypt", () => ({
   },
 }));
 
-vi.mock("../../src/services/user.service.js", () => ({
-  default: {
-    create: vi.fn(),
-    findByAnyIdentifierAndRole: vi.fn(),
-    findByIdWithRole: vi.fn(),
-  },
-}));
-
-vi.mock("../../src/services/invitation.service.js", () => ({
-  default: {
-    validateAndConsume: vi.fn(),
-  },
-}));
-
-vi.mock("../../src/services/token.service.js", () => ({
-  default: {
-    generateTokenPair: vi.fn(),
-    verifyRefreshToken: vi.fn(),
-  },
-}));
-
-vi.mock("../../src/services/setting.service.js", () => ({
-  default: {
-    getAllowedEmailDomains: vi.fn(),
-  },
-}));
-
-import authService from "../../src/services/auth.service.js";
-import userService from "../../src/services/user.service.js";
-import invitationService from "../../src/services/invitation.service.js";
-import tokenService from "../../src/services/token.service.js";
-import settingService from "../../src/services/setting.service.js";
+import { AuthService } from "../../src/services/auth.service.js";
 import bcrypt from "bcrypt";
 
-const mockedUserService = vi.mocked(userService);
-const mockedInvitationService = vi.mocked(invitationService);
-const mockedTokenService = vi.mocked(tokenService);
-const mockedSettingService = vi.mocked(settingService);
+const mockedUserService = {
+  create: vi.fn(),
+  findByAnyIdentifierAndRole: vi.fn(),
+  findByIdWithRole: vi.fn(),
+  getProfile: vi.fn(),
+  updateProfile: vi.fn(),
+  updatePassword: vi.fn(),
+  getPasswordHash: vi.fn(),
+  findByEmail: vi.fn(),
+  saveResetCode: vi.fn(),
+  clearResetCode: vi.fn(),
+  listUsers: vi.fn(),
+  updateUserByAdmin: vi.fn(),
+};
+const mockedInvitationService = {
+  getAll: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+  delete: vi.fn(),
+  validateAndConsume: vi.fn(),
+};
+const mockedTokenService = {
+  generateTokenPair: vi.fn(),
+  verifyAccessToken: vi.fn(),
+  verifyRefreshToken: vi.fn(),
+  generateResetToken: vi.fn(),
+  verifyResetToken: vi.fn(),
+};
+const mockedSettingService = {
+  getAllowedEmailDomains: vi.fn(),
+  setAllowedEmailDomains: vi.fn(),
+};
+const mockedMailProviderFactory = { create: vi.fn() };
+const mockedMailTemplateService = { renderPasswordReset: vi.fn() };
 const mockedBcrypt = vi.mocked(bcrypt);
+
+const authService = new AuthService(
+  mockedUserService,
+  mockedTokenService,
+  mockedInvitationService,
+  mockedMailProviderFactory,
+  mockedMailTemplateService,
+  mockedSettingService
+);
 
 describe("AuthService", () => {
   beforeEach(() => {

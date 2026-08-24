@@ -12,8 +12,8 @@ Leyenda: ✅ Resuelto · 🔶 Parcial · ⏳ Abierta.
 | 02 | Sin límite de contenedores concurrentes | 0 | ✅ Resuelto | feat/execution-concurrency-limit |
 | 03 | Sin validación de tamaño de entrada | 0 | ✅ Resuelto | feat/execution-input-size-limit |
 | 31 | Sin reconciliación externa de contenedores | 0 | ⏳ Abierta | — |
-| 04 | Servicios singletons acoplados | 1 | ⏳ Abierta | — |
-| 05 | Patrón de exportación inconsistente | 1 | ⏳ Abierta | — |
+| 04 | Servicios singletons acoplados | 1 | ✅ Resuelto | feat/dependency-injection-awilix |
+| 05 | Patrón de exportación inconsistente | 1 | ✅ Resuelto | feat/dependency-injection-awilix |
 | 06 | Sin manejo centralizado de errores | 2 | ⏳ Abierta | — |
 | 07 | Errores de BD silenciados | 2 | ⏳ Abierta | — |
 | 08 | Request body sin validación en runtime | 3 | ⏳ Abierta | — |
@@ -21,7 +21,7 @@ Leyenda: ✅ Resuelto · 🔶 Parcial · ⏳ Abierta.
 | 10 | Cero tests | 4 | ✅ Resuelto | Sesión Vitest + supertest |
 | 11 | Tipos `any` por todo el código | 5 | ⏳ Abierta | — |
 | 12 | Estilos inconsistentes en controladores | 5 | ⏳ Abierta | — |
-| 13 | Interfaces con implementación parcial | 5 | ⏳ Abierta | — |
+| 13 | Interfaces con implementación parcial | 5 | ✅ Resuelto | feat/dependency-injection-awilix |
 | 14 | Código muerto | 5 | ⏳ Abierta | — |
 | 15 | Seed duplica singleton de Prisma | 5 | ⏳ Abierta | — |
 | 16 | Sin logging estructurado | 6 | ⏳ Abierta | — |
@@ -40,7 +40,7 @@ Leyenda: ✅ Resuelto · 🔶 Parcial · ⏳ Abierta.
 | 30 | Rollback automático del deploy roto | 12 | ⏳ Abierta | — |
 | 29 | Subida directa de imágenes | 13 | ⏳ Abierta | — |
 
-**Resumen**: 31 deudas · 4 ✅ resueltas · 1 🔶 parcial (01) · 26 ⏳ abiertas.
+**Resumen**: 31 deudas · 7 ✅ resueltas · 1 🔶 parcial (01) · 23 ⏳ abiertas.
 
 ---
 
@@ -107,10 +107,14 @@ Leyenda: ✅ Resuelto · 🔶 Parcial · ⏳ Abierta.
   - **Imposible testear unitariamente**: no se puede mockear `executionService` dentro de `evaluationService`.
   - **Acoplamiento fuerte**: cambiar la firma de un servicio rompe a todos sus consumidores.
   - **Dificulta escalar**: no se puede reemplazar `executionService` por otra implementación (ej. Kubernetes jobs en vez de Docker local).
-- **Recomendación**:
-  1. Usar `tsyringe` como contenedor ligero de DI (sintaxis `@injectable()`, `@inject()`).
-  2. Todas las dependencias se reciben por constructor, no por import directo.
-  3. Los singletons se registran en un módulo central y se resuelven desde el contenedor.
+- **Solución implementada** (`feat/dependency-injection-awilix`):
+  1. **awilix** como contenedor DI (sin decorators ni `reflect-metadata`, compatible con ESM + `tsx`/esbuild).
+  2. **Composition root único** en `src/config/container.ts`: registra los 13 servicios, 12 controllers y 3 middlewares (singletons). Ningún servicio/controller importa el container (prohibido el *service locator*).
+  3. **Inyección por constructor explícita**: todos los servicios y controllers reciben sus dependencias por constructor; eliminados todos los `export default new X()` e imports directos entre servicios.
+  4. **Middlewares como factories**: `createAuthenticate(tokenService)`, `createOptionalAuthenticate(tokenService)`, `createRbac(tokenService)`.
+  5. **Controllers con arrow properties** (`public getAll = async (...) => {}`) para el bindeo correcto de `this` en Express.
+  6. **`prisma` queda fuera del contenedor** (infraestructura, no servicio): se mantiene como import directo.
+- **Testabilidad conseguida**: los unit tests inyectan mocks por constructor (`new EvaluationService(mockExecutionService)`) y los tests de integración inyectan mocks vía `tests/integration/helpers/register-mocks.ts`.
 
 ```typescript
 // Antes (actual)
@@ -122,11 +126,9 @@ export class EvaluationService {
 }
 
 // Después (con DI)
-@injectable()
+import type { IExecutionService } from "./interfaces/execution.service.interface.js";
 export class EvaluationService implements IEvaluationService {
-  constructor(
-    @inject("IExecutionService") private executionService: IExecutionService
-  ) {}
+  constructor(private readonly executionService: IExecutionService) {}
 }
 ```
 
@@ -135,7 +137,7 @@ export class EvaluationService implements IEvaluationService {
 - **Archivos**: `src/controllers/activity.controller.ts:10`, `src/services/activity.service.ts:10`
 - **Problema**: Casi todos los servicios se exportan como `export default new Xxx()`, pero `ActivityService` se instancia manualmente en su controller con `const activityService = new ActivityService()`. Todos los servicios se exportan como default singleton excepto `ActivityService`.
 - **Impacto**: Confusión sobre cuál es el patrón canónico. Posibles múltiples instancias de `ActivityService`.
-- **Recomendación**: Uniformizar antes de migrar a DI.
+- **Solución implementada** (`feat/dependency-injection-awilix`): patrón unificado — todos los servicios y controllers exportan su **clase** y se instancian **una única vez** desde `src/config/container.ts`. No existe más `export default new X()` ni instanciación manual en controllers.
 
 ---
 
@@ -286,9 +288,9 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 ### DEBT‑13: Interfaces con implementación parcial
 
 - **Archivos**: `src/services/interfaces/`
-- **Problema**: Solo 6 de 9 servicios tienen interfaz. `InvitationService`, `ProgrammingLanguageService`, `AuthService`, `UserService` no la tienen. Los que sí la tienen, no siempre se usan (los controllers importan la implementación concreta, no la interfaz).
+- **Problema**: Solo 6 de 9 servicios tenían interfaz. `InvitationService`, `ProgrammingLanguageService`, `AuthService`, `UserService` no la tenían. Los que sí la tenían, no siempre se usan (los controllers importaban la implementación concreta, no la interfaz).
 - **Impacto**: Las interfaces existen pero no cumplen su propósito de desacoplamiento. Es código muerto que da falsa sensación de arquitectura limpia.
-- **Recomendación**: O bien eliminar las interfaces no usadas, o bien migrar a DI para que tengan utilidad real.
+- **Solución implementada** (`feat/dependency-injection-awilix`): completadas las interfaces faltantes (`IAuthService`, `IUserService`, `IInvitationService`, `IProgrammingLanguageService`, `ISettingService`) y todos los 13 servicios las implementan. Los controllers dependen de las interfaces, no de las clases concretas.
 
 ### DEBT‑14: Código muerto
 
@@ -513,10 +515,10 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 | **Alta** | 31 | Sandbox | Reconciliación externa de contenedores huérfanos (residual de DEBT‑01) |
 | **Alta** | 08, 09, 20 | Validación + Rate limit | Zod schemas y corregir límite a 2 |
 | **Alta** | 06, 07 | Error handling | AppError + middleware global |
-| **Alta** | 04, 05 | DI + acoplamiento | tsyringe, desacoplar servicios |
+| **Alta** | 04 ✅, 05 ✅ | DI + acoplamiento | awilix: composition root único, inyección por constructor |
 | **Alta** | 11 | Tipos `any` | Arreglar express.d.ts y eliminar casteos |
 | **Alta** | 30 | CI/CD | Rollback roto: arreglar sudoers y fijar digest anterior |
-| **Media** | 12, 13, 14, 15 | Consistencia | Uniformizar estilos, limpiar código muerto |
+| **Media** | 12, 14, 15 | Consistencia | Uniformizar estilos, limpiar código muerto |
 | **Media** | 16, 17 | Observabilidad | pino, health check |
 | **Media** | 19, 21 | BD + auth | Índices, rate limit en login |
 | **Media** | 24, 25, 26 | Negocio | Endpoints de enrollment y submissions |

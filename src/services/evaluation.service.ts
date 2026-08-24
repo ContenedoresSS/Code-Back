@@ -1,14 +1,15 @@
 import type { TestCase } from "@prisma/client";
-import prisma from "../config/prisma.js";
 import { ExecutionStatus } from "../types/enums/execution-status.enum.js";
 import { SubmissionStatus } from "../types/enums/submission-status.enum.js";
 import type { CodeFile } from "../types/models/execution/code-file.model.js";
 import type { EvaluationResult } from "../types/responses/evaluation-result.response.js";
-import executionService from "./execution.service.js";
 import type { IEvaluationService } from "./interfaces/evaluation.service.interface.js";
+import type { IExecutionService } from "./interfaces/execution.service.interface.js";
 import { QueueTimeoutError } from "../helpers/concurrency-limiter.helper.js";
 
 export class EvaluationService implements IEvaluationService {
+  constructor(private readonly executionService: IExecutionService) {}
+
   public async evaluateSubmission(
     languageId: number,
     testCases: TestCase[],
@@ -26,7 +27,7 @@ export class EvaluationService implements IEvaluationService {
       const entryPoint = files[0]?.name || "main";
 
       for (const testCase of testCases) {
-        const executionResult = await executionService.runCodeWithFiles(
+        const executionResult = await this.executionService.runCodeWithFiles(
           languageId,
           files,
           entryPoint,
@@ -96,5 +97,3 @@ export class EvaluationService implements IEvaluationService {
     }
   }
 }
-
-export default new EvaluationService();

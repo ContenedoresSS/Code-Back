@@ -459,5 +459,3 @@ export class ActivityService implements IActivityService {
     }
   }
 }
-
-export default new ActivityService();

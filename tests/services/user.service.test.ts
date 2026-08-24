@@ -29,9 +29,10 @@ vi.mock("bcrypt", () => ({
   },
 }));
 
-import userService from "../../src/services/user.service.js";
+import { UserService } from "../../src/services/user.service.js";
 import bcrypt from "bcrypt";
 
+const userService = new UserService();
 const mockedBcrypt = vi.mocked(bcrypt);
 
 describe("UserService", () => {

@@ -17,7 +17,9 @@ vi.mock("../../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-import invitationService from "../../src/services/invitation.service.js";
+import { InvitationService } from "../../src/services/invitation.service.js";
+
+const invitationService = new InvitationService();
 
 describe("InvitationService", () => {
   beforeEach(() => {
@@ -156,9 +158,9 @@ describe("InvitationService", () => {
         },
       };
 
-      await expect(
-        invitationService.validateAndConsume("INVALID", mockTx)
-      ).rejects.toThrow("Invitation code not found");
+      await expect(invitationService.validateAndConsume("INVALID", mockTx)).rejects.toThrow(
+        "Invitation code not found"
+      );
     });
 
     it("throws error when invitation code already used", async () => {
@@ -172,9 +174,9 @@ describe("InvitationService", () => {
         },
       };
 
-      await expect(
-        invitationService.validateAndConsume("ABC123", mockTx)
-      ).rejects.toThrow("Invitation code already used");
+      await expect(invitationService.validateAndConsume("ABC123", mockTx)).rejects.toThrow(
+        "Invitation code already used"
+      );
     });
   });
 });

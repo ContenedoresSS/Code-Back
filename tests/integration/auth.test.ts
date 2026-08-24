@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import app from "../../src/app.js";
-import authService from "../../src/services/auth.service.js";
 import { Prisma } from "@prisma/client";
-
-vi.mock("../../src/services/auth.service.js");
-
-const mockedAuthService = vi.mocked(authService);
+import { mockAuthService } from "./helpers/register-mocks.js";
+import app from "../../src/app.js";
 
 describe("Integration: Auth Endpoints", () => {
   beforeEach(() => {
@@ -24,7 +20,7 @@ describe("Integration: Auth Endpoints", () => {
         role: "Student",
       };
 
-      mockedAuthService.register.mockResolvedValue(mockUser);
+      mockAuthService.register.mockResolvedValue(mockUser);
 
       const response = await request(app).post("/api/v1/auth/register").send({
         email: "student@example.com",
@@ -49,7 +45,7 @@ describe("Integration: Auth Endpoints", () => {
         role: "Teacher",
       };
 
-      mockedAuthService.register.mockResolvedValue(mockUser);
+      mockAuthService.register.mockResolvedValue(mockUser);
 
       const response = await request(app).post("/api/v1/auth/register").send({
         email: "teacher@example.com",
@@ -64,7 +60,7 @@ describe("Integration: Auth Endpoints", () => {
     });
 
     it("returns 400 for invalid invitation code", async () => {
-      mockedAuthService.register.mockRejectedValue(
+      mockAuthService.register.mockRejectedValue(
         new Error("Invitation code is invalid or already used")
       );
 
@@ -86,7 +82,7 @@ describe("Integration: Auth Endpoints", () => {
         meta: { target: ["email"] },
       });
 
-      mockedAuthService.register.mockRejectedValue(prismaError);
+      mockAuthService.register.mockRejectedValue(prismaError);
 
       const response = await request(app).post("/api/v1/auth/register").send({
         email: "existing@example.com",
@@ -106,7 +102,7 @@ describe("Integration: Auth Endpoints", () => {
         refreshToken: "refresh-token-456",
       };
 
-      mockedAuthService.login.mockResolvedValue(mockLoginResult);
+      mockAuthService.login.mockResolvedValue(mockLoginResult);
 
       const response = await request(app).post("/api/v1/auth/login").send({
         identifier: "student@example.com",
@@ -120,7 +116,7 @@ describe("Integration: Auth Endpoints", () => {
     });
 
     it("returns 401 for invalid credentials", async () => {
-      mockedAuthService.login.mockRejectedValue(new Error("Invalid credentials"));
+      mockAuthService.login.mockRejectedValue(new Error("Invalid credentials"));
 
       const response = await request(app).post("/api/v1/auth/login").send({
         identifier: "student@example.com",
@@ -132,7 +128,7 @@ describe("Integration: Auth Endpoints", () => {
     });
 
     it("returns 403 when the account is deactivated", async () => {
-      mockedAuthService.login.mockRejectedValue(new Error("La cuenta está desactivada."));
+      mockAuthService.login.mockRejectedValue(new Error("La cuenta está desactivada."));
 
       const response = await request(app).post("/api/v1/auth/login").send({
         identifier: "student@example.com",
@@ -151,7 +147,7 @@ describe("Integration: Auth Endpoints", () => {
         refreshToken: "new-refresh-token",
       };
 
-      mockedAuthService.refreshAccessToken.mockResolvedValue(mockRefreshResult);
+      mockAuthService.refreshAccessToken.mockResolvedValue(mockRefreshResult);
 
       const response = await request(app).post("/api/v1/auth/refresh").send({
         refreshToken: "valid-refresh-token",
@@ -163,7 +159,7 @@ describe("Integration: Auth Endpoints", () => {
     });
 
     it("returns 400 for invalid refresh token", async () => {
-      mockedAuthService.refreshAccessToken.mockRejectedValue(
+      mockAuthService.refreshAccessToken.mockRejectedValue(
         new Error("Invalid or expired refresh token")
       );
 
@@ -175,7 +171,7 @@ describe("Integration: Auth Endpoints", () => {
     });
 
     it("returns 403 when the account is deactivated", async () => {
-      mockedAuthService.refreshAccessToken.mockRejectedValue(
+      mockAuthService.refreshAccessToken.mockRejectedValue(
         new Error("La cuenta está desactivada.")
       );
 

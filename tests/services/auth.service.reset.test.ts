@@ -23,52 +23,54 @@ vi.mock("bcrypt", () => ({
   },
 }));
 
-vi.mock("../../src/services/user.service.js", () => ({
-  default: {
-    create: vi.fn(),
-    findByAnyIdentifierAndRole: vi.fn(),
-    findByIdWithRole: vi.fn(),
-    findByEmail: vi.fn(),
-    saveResetCode: vi.fn(),
-    clearResetCode: vi.fn(),
-    updatePassword: vi.fn(),
-  },
-}));
-
-vi.mock("../../src/services/token.service.js", () => ({
-  default: {
-    generateTokenPair: vi.fn(),
-    verifyRefreshToken: vi.fn(),
-    generateResetToken: vi.fn().mockReturnValue("reset-token"),
-    verifyResetToken: vi.fn().mockReturnValue("user-1"),
-  },
-}));
-
-vi.mock("../../src/services/mail/mail-provider.factory.js", () => ({
-  default: {
-    create: vi.fn(),
-  },
-}));
-
-vi.mock("../../src/services/mail/mail-template.service.js", () => ({
-  default: {
-    renderPasswordReset: vi.fn(),
-  },
-}));
-
-import authService from "../../src/services/auth.service.js";
-import userService from "../../src/services/user.service.js";
-import tokenService from "../../src/services/token.service.js";
-import mailProviderFactory from "../../src/services/mail/mail-provider.factory.js";
-import mailTemplateService from "../../src/services/mail/mail-template.service.js";
+import { AuthService } from "../../src/services/auth.service.js";
 import { MailProviderNotConfiguredError } from "../../src/services/mail/mail-provider-not-configured.error.js";
 import bcrypt from "bcrypt";
 
-const mockedUserService = vi.mocked(userService);
-const mockedTokenService = vi.mocked(tokenService);
-const mockedFactory = vi.mocked(mailProviderFactory);
-const mockedTemplateService = vi.mocked(mailTemplateService);
+const mockedUserService = {
+  create: vi.fn(),
+  findByAnyIdentifierAndRole: vi.fn(),
+  findByIdWithRole: vi.fn(),
+  getProfile: vi.fn(),
+  updateProfile: vi.fn(),
+  updatePassword: vi.fn(),
+  getPasswordHash: vi.fn(),
+  findByEmail: vi.fn(),
+  saveResetCode: vi.fn(),
+  clearResetCode: vi.fn(),
+  listUsers: vi.fn(),
+  updateUserByAdmin: vi.fn(),
+};
+const mockedTokenService = {
+  generateTokenPair: vi.fn(),
+  verifyAccessToken: vi.fn(),
+  verifyRefreshToken: vi.fn(),
+  generateResetToken: vi.fn().mockReturnValue("reset-token"),
+  verifyResetToken: vi.fn().mockReturnValue("user-1"),
+};
+const mockedInvitationService = {
+  getAll: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+  delete: vi.fn(),
+  validateAndConsume: vi.fn(),
+};
+const mockedSettingService = {
+  getAllowedEmailDomains: vi.fn(),
+  setAllowedEmailDomains: vi.fn(),
+};
+const mockedFactory = { create: vi.fn() };
+const mockedTemplateService = { renderPasswordReset: vi.fn() };
 const mockedBcrypt = vi.mocked(bcrypt);
+
+const authService = new AuthService(
+  mockedUserService,
+  mockedTokenService,
+  mockedInvitationService,
+  mockedFactory,
+  mockedTemplateService,
+  mockedSettingService
+);
 
 describe("AuthService reset flow", () => {
   let mockSend: ReturnType<typeof vi.fn>;

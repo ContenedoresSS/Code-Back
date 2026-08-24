@@ -6,7 +6,7 @@ import { ENV } from "../config/env.config.js";
 
 const RESET_TOKEN_PURPOSE = "password-reset";
 
-class TokenService implements ITokenService {
+export class TokenService implements ITokenService {
   async generateTokenPair(payload: TokenPayload): Promise<TokenPair> {
     const accessToken = jwt.sign(
       {
@@ -74,5 +74,3 @@ class TokenService implements ITokenService {
     }
   }
 }
-
-export default new TokenService();

@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import app from "../../src/app.js";
-import activityService from "../../src/services/activity.service.js";
 import { generateTeacherToken, generateStudentToken } from "./helpers/tokens.js";
-
-vi.mock("../../src/services/activity.service.js");
-
-const mockedActivityService = vi.mocked(activityService);
+import { mockActivityService } from "./helpers/register-mocks.js";
+import app from "../../src/app.js";
 
 describe("Integration: Activity Endpoints", () => {
   beforeEach(() => {
@@ -33,7 +29,7 @@ describe("Integration: Activity Endpoints", () => {
         testCases: [{ id: 1, isHidden: false, input: "aW5wdXQ=", expectedOutput: "b3V0cHV0" }],
       };
 
-      mockedActivityService.getWorkspaceForStudent.mockResolvedValue(mockWorkspace);
+      mockActivityService.getWorkspaceForStudent.mockResolvedValue(mockWorkspace);
 
       const response = await request(app).get("/api/v1/activity/1/workspace");
 
@@ -44,7 +40,7 @@ describe("Integration: Activity Endpoints", () => {
     });
 
     it("exposes the full rules object to the student editor", async () => {
-      mockedActivityService.getWorkspaceForStudent.mockResolvedValue({
+      mockActivityService.getWorkspaceForStudent.mockResolvedValue({
         activityId: "1",
         title: "Hello World",
         description: null,
@@ -78,7 +74,7 @@ describe("Integration: Activity Endpoints", () => {
     });
 
     it("returns 404 when activity not found", async () => {
-      mockedActivityService.getWorkspaceForStudent.mockRejectedValue(
+      mockActivityService.getWorkspaceForStudent.mockRejectedValue(
         new Error("La actividad no existe o no está disponible.")
       );
 
@@ -104,7 +100,7 @@ describe("Integration: Activity Endpoints", () => {
         totalCount: 2,
       };
 
-      mockedActivityService.getAllActivities.mockResolvedValue(mockActivities);
+      mockActivityService.getAllActivities.mockResolvedValue(mockActivities);
 
       const token = generateTeacherToken();
       const response = await request(app)
@@ -138,7 +134,7 @@ describe("Integration: Activity Endpoints", () => {
         totalCount: 1,
       };
 
-      mockedActivityService.getAllActivities.mockResolvedValue(mockActivities);
+      mockActivityService.getAllActivities.mockResolvedValue(mockActivities);
 
       const token = generateTeacherToken();
       const response = await request(app)
@@ -160,7 +156,7 @@ describe("Integration: Activity Endpoints", () => {
         languageId: 1,
       };
 
-      mockedActivityService.createActivity.mockResolvedValue(mockActivity);
+      mockActivityService.createActivity.mockResolvedValue(mockActivity);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -259,7 +255,7 @@ describe("Integration: Activity Endpoints", () => {
     });
 
     it("returns 404 when subject not found", async () => {
-      mockedActivityService.createActivity.mockRejectedValue(
+      mockActivityService.createActivity.mockRejectedValue(
         new Error("El curso no existe o no tienes permisos sobre él.")
       );
 
@@ -285,7 +281,7 @@ describe("Integration: Activity Endpoints", () => {
         professorId: "teacher-1",
       };
 
-      mockedActivityService.getActivityById.mockResolvedValue(mockActivity);
+      mockActivityService.getActivityById.mockResolvedValue(mockActivity);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -297,7 +293,7 @@ describe("Integration: Activity Endpoints", () => {
     });
 
     it("returns 404 when activity not found", async () => {
-      mockedActivityService.getActivityById.mockRejectedValue(
+      mockActivityService.getActivityById.mockRejectedValue(
         new Error("Actividad no encontrada o no tienes permisos para acceder a ella.")
       );
 
@@ -318,7 +314,7 @@ describe("Integration: Activity Endpoints", () => {
         professorId: "teacher-1",
       };
 
-      mockedActivityService.updateActivity.mockResolvedValue(mockActivity);
+      mockActivityService.updateActivity.mockResolvedValue(mockActivity);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -338,7 +334,7 @@ describe("Integration: Activity Endpoints", () => {
         professorId: "teacher-1",
       };
 
-      mockedActivityService.updateActivity.mockResolvedValue(mockActivity);
+      mockActivityService.updateActivity.mockResolvedValue(mockActivity);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -351,7 +347,7 @@ describe("Integration: Activity Endpoints", () => {
     });
 
     it("returns 404 when language not found", async () => {
-      mockedActivityService.updateActivity.mockRejectedValue(
+      mockActivityService.updateActivity.mockRejectedValue(
         new Error("El lenguaje de programación especificado no existe.")
       );
 
@@ -395,7 +391,7 @@ describe("Integration: Activity Endpoints", () => {
         totalCount: 1,
       };
 
-      mockedActivityService.getActivityGrades.mockResolvedValue(mockGrades);
+      mockActivityService.getActivityGrades.mockResolvedValue(mockGrades);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -425,7 +421,7 @@ describe("Integration: Activity Endpoints", () => {
     });
 
     it("returns 404 when activity not found", async () => {
-      mockedActivityService.getActivityGrades.mockRejectedValue(
+      mockActivityService.getActivityGrades.mockRejectedValue(
         new Error("Actividad no encontrada o no tienes permisos para acceder a ella.")
       );
 
@@ -438,7 +434,7 @@ describe("Integration: Activity Endpoints", () => {
     });
 
     it("returns 403 when the teacher is not the subject owner", async () => {
-      mockedActivityService.getActivityGrades.mockRejectedValue(
+      mockActivityService.getActivityGrades.mockRejectedValue(
         new Error("No tienes permiso para ver las calificaciones de esta actividad.")
       );
 
@@ -451,7 +447,7 @@ describe("Integration: Activity Endpoints", () => {
     });
 
     it("forwards the search query parameter", async () => {
-      mockedActivityService.getActivityGrades.mockResolvedValue({ data: [], totalCount: 0 });
+      mockActivityService.getActivityGrades.mockResolvedValue({ data: [], totalCount: 0 });
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -459,7 +455,7 @@ describe("Integration: Activity Endpoints", () => {
         .set("Authorization", `Bearer ${token}`);
 
       expect(response.status).toBe(200);
-      expect(mockedActivityService.getActivityGrades).toHaveBeenCalledWith(
+      expect(mockActivityService.getActivityGrades).toHaveBeenCalledWith(
         "1",
         expect.any(String),
         "teacher-1",
@@ -493,7 +489,7 @@ describe("Integration: Activity Endpoints", () => {
     };
 
     it("returns the submission detail for Teacher role", async () => {
-      mockedActivityService.getSubmissionDetail.mockResolvedValue(mockDetail);
+      mockActivityService.getSubmissionDetail.mockResolvedValue(mockDetail);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -502,7 +498,7 @@ describe("Integration: Activity Endpoints", () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockDetail);
-      expect(mockedActivityService.getSubmissionDetail).toHaveBeenCalledWith(
+      expect(mockActivityService.getSubmissionDetail).toHaveBeenCalledWith(
         "1",
         "sub-1",
         expect.any(String),
@@ -526,9 +522,7 @@ describe("Integration: Activity Endpoints", () => {
     });
 
     it("returns 404 when the submission is not found", async () => {
-      mockedActivityService.getSubmissionDetail.mockRejectedValue(
-        new Error("Envío no encontrado.")
-      );
+      mockActivityService.getSubmissionDetail.mockRejectedValue(new Error("Envío no encontrado."));
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -539,7 +533,7 @@ describe("Integration: Activity Endpoints", () => {
     });
 
     it("returns 403 when the teacher is not the subject owner", async () => {
-      mockedActivityService.getSubmissionDetail.mockRejectedValue(
+      mockActivityService.getSubmissionDetail.mockRejectedValue(
         new Error("No tienes permiso para ver este envío.")
       );
 

@@ -2,16 +2,18 @@ import type { Request, Response } from "express";
 import type { CreateEnrollmentRequest } from "../types/requests/create-enrollment-request.model.js";
 import { getPaginationParams } from "../helpers/pagination.helper.js";
 import { parseStringParam } from "../helpers/param.helper.js";
-import enrollmentService from "../services/enrollment.service.js";
+import type { IEnrollmentService } from "../services/interfaces/enrollment.service.interface.js";
 import type { UserRole } from "../types/enums/role.enum.js";
 
-class EnrollmentController {
-  public async enroll(req: Request, res: Response) {
+export class EnrollmentController {
+  constructor(private readonly enrollmentService: IEnrollmentService) {}
+
+  public enroll = async (req: Request, res: Response) => {
     try {
       const data: CreateEnrollmentRequest = req.body;
       const userId = req.user as string;
 
-      const enrollment = await enrollmentService.enrollStudent(userId, data);
+      const enrollment = await this.enrollmentService.enrollStudent(userId, data);
       return res.status(201).json(enrollment);
     } catch (error: any) {
       if (error.message === "Ya estas inscrito en esta materia.") {
@@ -19,9 +21,9 @@ class EnrollmentController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async getAll(req: Request, res: Response) {
+  public getAll = async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user as string;
       const userRole = (req as any).role as UserRole;
@@ -31,7 +33,7 @@ class EnrollmentController {
       const searchParam = req.query.search;
       const searchTerm = typeof searchParam === "string" ? searchParam.trim() : undefined;
 
-      const paginatedEnrollments = await enrollmentService.getEnrollments(
+      const paginatedEnrollments = await this.enrollmentService.getEnrollments(
         userId,
         userRole,
         skip,
@@ -43,15 +45,15 @@ class EnrollmentController {
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async delete(req: Request, res: Response) {
+  public delete = async (req: Request, res: Response) => {
     try {
       const enrollmentId = parseStringParam(req.params.id, "enrollmentId");
       const userId = (req as any).user as string;
       const userRole = (req as any).role as UserRole;
 
-      await enrollmentService.unenroll(enrollmentId, userId, userRole);
+      await this.enrollmentService.unenroll(enrollmentId, userId, userRole);
 
       return res.status(204).send();
     } catch (error: any) {
@@ -63,7 +65,5 @@ class EnrollmentController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 }
-
-export default new EnrollmentController();

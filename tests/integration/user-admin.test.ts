@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import app from "../../src/app.js";
-import userService from "../../src/services/user.service.js";
 import { generateGodToken, generateTeacherToken, generateStudentToken } from "./helpers/tokens.js";
-
-vi.mock("../../src/services/user.service.js");
-
-const mockedUserService = vi.mocked(userService);
+import { mockUserService } from "./helpers/register-mocks.js";
+import app from "../../src/app.js";
 
 describe("Integration: User Admin Endpoints", () => {
   beforeEach(() => {
@@ -31,7 +27,7 @@ describe("Integration: User Admin Endpoints", () => {
         totalCount: 1,
       };
 
-      mockedUserService.listUsers.mockResolvedValue(mockUsers);
+      mockUserService.listUsers.mockResolvedValue(mockUsers);
 
       const token = generateGodToken("god-1");
       const response = await request(app)
@@ -45,7 +41,7 @@ describe("Integration: User Admin Endpoints", () => {
     });
 
     it("forwards role, search and pagination filters", async () => {
-      mockedUserService.listUsers.mockResolvedValue({ data: [], totalCount: 0 });
+      mockUserService.listUsers.mockResolvedValue({ data: [], totalCount: 0 });
 
       const token = generateGodToken("god-1");
       const response = await request(app)
@@ -53,7 +49,7 @@ describe("Integration: User Admin Endpoints", () => {
         .set("Authorization", `Bearer ${token}`);
 
       expect(response.status).toBe(200);
-      expect(mockedUserService.listUsers).toHaveBeenCalledWith("Teacher", "al", 0, 10);
+      expect(mockUserService.listUsers).toHaveBeenCalledWith("Teacher", "al", 0, 10);
     });
 
     it("returns 403 for Teacher role", async () => {
@@ -94,7 +90,7 @@ describe("Integration: User Admin Endpoints", () => {
         role: { id: 1, name: "Student" },
       };
 
-      mockedUserService.updateUserByAdmin.mockResolvedValue(mockUpdated);
+      mockUserService.updateUserByAdmin.mockResolvedValue(mockUpdated);
 
       const token = generateGodToken("god-1");
       const response = await request(app)
@@ -104,7 +100,7 @@ describe("Integration: User Admin Endpoints", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.isActive).toBe(false);
-      expect(mockedUserService.updateUserByAdmin).toHaveBeenCalledWith("u1", { isActive: false });
+      expect(mockUserService.updateUserByAdmin).toHaveBeenCalledWith("u1", { isActive: false });
     });
 
     it("returns 400 when the body is empty", async () => {
@@ -129,7 +125,7 @@ describe("Integration: User Admin Endpoints", () => {
     });
 
     it("returns 409 when deactivating the last active admin", async () => {
-      mockedUserService.updateUserByAdmin.mockRejectedValue(
+      mockUserService.updateUserByAdmin.mockRejectedValue(
         new Error("No se puede desactivar o degradar al último administrador activo.")
       );
 
@@ -143,7 +139,7 @@ describe("Integration: User Admin Endpoints", () => {
     });
 
     it("returns 404 when the user does not exist", async () => {
-      mockedUserService.updateUserByAdmin.mockRejectedValue(new Error("Usuario no encontrado"));
+      mockUserService.updateUserByAdmin.mockRejectedValue(new Error("Usuario no encontrado"));
 
       const token = generateGodToken("god-1");
       const response = await request(app)

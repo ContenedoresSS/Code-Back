@@ -16,17 +16,20 @@ vi.mock("../../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-vi.mock("../../src/services/activity.service.js", () => ({
-  default: {
-    getActivityById: vi.fn(),
-  },
-}));
-
-import testCaseService from "../../src/services/test-case.service.js";
-import activityService from "../../src/services/activity.service.js";
+import { TestCaseService } from "../../src/services/test-case.service.js";
 import { UserRole } from "../../src/types/enums/role.enum.js";
 
-const mockedActivityService = vi.mocked(activityService);
+const mockedActivityService = {
+  createActivity: vi.fn(),
+  getActivityById: vi.fn(),
+  getAllActivities: vi.fn(),
+  updateActivity: vi.fn(),
+  deleteActivity: vi.fn(),
+  getWorkspaceForStudent: vi.fn(),
+  getActivityGrades: vi.fn(),
+  getSubmissionDetail: vi.fn(),
+};
+const testCaseService = new TestCaseService(mockedActivityService);
 
 describe("TestCaseService", () => {
   beforeEach(() => {
@@ -46,12 +49,11 @@ describe("TestCaseService", () => {
       mockedActivityService.getActivityById.mockResolvedValue({} as any);
       mockPrisma.testCase.create.mockResolvedValue(mockTestCase);
 
-      const result = await testCaseService.createTestCase(
-        "1",
-        UserRole.Teacher,
-        "teacher-1",
-        { input: "aW5wdXQ=", expectedOutput: "b3V0cHV0", isHidden: false }
-      );
+      const result = await testCaseService.createTestCase("1", UserRole.Teacher, "teacher-1", {
+        input: "aW5wdXQ=",
+        expectedOutput: "b3V0cHV0",
+        isHidden: false,
+      });
 
       expect(mockedActivityService.getActivityById).toHaveBeenCalledWith(
         "1",
@@ -70,9 +72,7 @@ describe("TestCaseService", () => {
     });
 
     it("throws error when activity not found", async () => {
-      mockedActivityService.getActivityById.mockRejectedValue(
-        new Error("Actividad no encontrada")
-      );
+      mockedActivityService.getActivityById.mockRejectedValue(new Error("Actividad no encontrada"));
 
       await expect(
         testCaseService.createTestCase("999", UserRole.Teacher, "teacher-1", {
@@ -108,20 +108,29 @@ describe("TestCaseService", () => {
 
   describe("updateTestCase", () => {
     it("updates test case fields", async () => {
-      const existingTestCase = { id: 1, activityId: "1", input: "aW5wdXQ=", expectedOutput: "b3V0cHV0", isHidden: false };
-      const updatedTestCase = { id: 1, activityId: "1", input: "bmV3", expectedOutput: "b3V0cHV0", isHidden: true };
+      const existingTestCase = {
+        id: 1,
+        activityId: "1",
+        input: "aW5wdXQ=",
+        expectedOutput: "b3V0cHV0",
+        isHidden: false,
+      };
+      const updatedTestCase = {
+        id: 1,
+        activityId: "1",
+        input: "bmV3",
+        expectedOutput: "b3V0cHV0",
+        isHidden: true,
+      };
 
       mockedActivityService.getActivityById.mockResolvedValue({} as any);
       mockPrisma.testCase.findFirst.mockResolvedValue(existingTestCase);
       mockPrisma.testCase.update.mockResolvedValue(updatedTestCase);
 
-      const result = await testCaseService.updateTestCase(
-        1,
-        "1",
-        UserRole.Teacher,
-        "teacher-1",
-        { input: "bmV3", isHidden: true }
-      );
+      const result = await testCaseService.updateTestCase(1, "1", UserRole.Teacher, "teacher-1", {
+        input: "bmV3",
+        isHidden: true,
+      });
 
       expect(mockPrisma.testCase.update).toHaveBeenCalledWith({
         where: { id: 1 },

@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import app from "../../src/app.js";
-import authService from "../../src/services/auth.service.js";
 import { MailProviderNotConfiguredError } from "../../src/services/mail/mail-provider-not-configured.error.js";
-
-vi.mock("../../src/services/auth.service.js");
-
-const mockedAuthService = vi.mocked(authService);
+import { mockAuthService } from "./helpers/register-mocks.js";
+import app from "../../src/app.js";
 
 describe("Integration: Password Reset Endpoints", () => {
   beforeEach(() => {
@@ -15,20 +11,20 @@ describe("Integration: Password Reset Endpoints", () => {
 
   describe("POST /api/v1/auth/forgot-password", () => {
     it("returns 200 for an existing email", async () => {
-      mockedAuthService.forgotPassword.mockResolvedValue();
+      mockAuthService.forgotPassword.mockResolvedValue();
 
       const response = await request(app)
         .post("/api/v1/auth/forgot-password")
         .send({ email: "student@example.com" });
 
       expect(response.status).toBe(200);
-      expect(mockedAuthService.forgotPassword).toHaveBeenCalledWith({
+      expect(mockAuthService.forgotPassword).toHaveBeenCalledWith({
         email: "student@example.com",
       });
     });
 
     it("returns 200 for a non-existing email (anti-enumeration)", async () => {
-      mockedAuthService.forgotPassword.mockResolvedValue();
+      mockAuthService.forgotPassword.mockResolvedValue();
 
       const response = await request(app)
         .post("/api/v1/auth/forgot-password")
@@ -38,7 +34,7 @@ describe("Integration: Password Reset Endpoints", () => {
     });
 
     it("returns 400 when the service fails", async () => {
-      mockedAuthService.forgotPassword.mockRejectedValue(new Error("Email could not be sent"));
+      mockAuthService.forgotPassword.mockRejectedValue(new Error("Email could not be sent"));
 
       const response = await request(app)
         .post("/api/v1/auth/forgot-password")
@@ -49,7 +45,7 @@ describe("Integration: Password Reset Endpoints", () => {
     });
 
     it("returns 500 when no mail provider is configured", async () => {
-      mockedAuthService.forgotPassword.mockRejectedValue(new MailProviderNotConfiguredError());
+      mockAuthService.forgotPassword.mockRejectedValue(new MailProviderNotConfiguredError());
 
       const response = await request(app)
         .post("/api/v1/auth/forgot-password")
@@ -62,7 +58,7 @@ describe("Integration: Password Reset Endpoints", () => {
 
   describe("POST /api/v1/auth/verify-reset-code", () => {
     it("returns a reset token for a valid code", async () => {
-      mockedAuthService.verifyResetCode.mockResolvedValue({ resetToken: "reset-token-123" });
+      mockAuthService.verifyResetCode.mockResolvedValue({ resetToken: "reset-token-123" });
 
       const response = await request(app)
         .post("/api/v1/auth/verify-reset-code")
@@ -73,9 +69,7 @@ describe("Integration: Password Reset Endpoints", () => {
     });
 
     it("returns 400 for an invalid or expired code", async () => {
-      mockedAuthService.verifyResetCode.mockRejectedValue(
-        new Error("Invalid or expired reset code")
-      );
+      mockAuthService.verifyResetCode.mockRejectedValue(new Error("Invalid or expired reset code"));
 
       const response = await request(app)
         .post("/api/v1/auth/verify-reset-code")
@@ -88,23 +82,21 @@ describe("Integration: Password Reset Endpoints", () => {
 
   describe("POST /api/v1/auth/reset-password", () => {
     it("returns 200 when the password is reset", async () => {
-      mockedAuthService.resetPassword.mockResolvedValue();
+      mockAuthService.resetPassword.mockResolvedValue();
 
       const response = await request(app)
         .post("/api/v1/auth/reset-password")
         .send({ resetToken: "reset-token-123", newPassword: "new-password-123" });
 
       expect(response.status).toBe(200);
-      expect(mockedAuthService.resetPassword).toHaveBeenCalledWith({
+      expect(mockAuthService.resetPassword).toHaveBeenCalledWith({
         resetToken: "reset-token-123",
         newPassword: "new-password-123",
       });
     });
 
     it("returns 400 for an invalid reset token", async () => {
-      mockedAuthService.resetPassword.mockRejectedValue(
-        new Error("Invalid or expired reset token")
-      );
+      mockAuthService.resetPassword.mockRejectedValue(new Error("Invalid or expired reset token"));
 
       const response = await request(app)
         .post("/api/v1/auth/reset-password")

@@ -1,13 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import app from "../../src/app.js";
-import submissionService from "../../src/services/submission.service.js";
 import { generateStudentToken } from "./helpers/tokens.js";
 import { SubmissionStatus } from "../../src/types/enums/submission-status.enum.js";
-
-vi.mock("../../src/services/submission.service.js");
-
-const mockedSubmissionService = vi.mocked(submissionService);
+import { mockSubmissionService } from "./helpers/register-mocks.js";
+import app from "../../src/app.js";
 
 describe("Integration: Submission Endpoints", () => {
   beforeEach(() => {
@@ -27,7 +23,7 @@ describe("Integration: Submission Endpoints", () => {
         saved: true,
       };
 
-      mockedSubmissionService.processSubmission.mockResolvedValue(mockResult);
+      mockSubmissionService.processSubmission.mockResolvedValue(mockResult);
 
       const token = generateStudentToken("student-1");
       const response = await request(app)
@@ -55,7 +51,7 @@ describe("Integration: Submission Endpoints", () => {
         saved: false,
       };
 
-      mockedSubmissionService.processSubmission.mockResolvedValue(mockResult);
+      mockSubmissionService.processSubmission.mockResolvedValue(mockResult);
 
       const response = await request(app)
         .post("/api/v1/activity/1/submit")
@@ -69,7 +65,7 @@ describe("Integration: Submission Endpoints", () => {
     });
 
     it("forwards the requested languageId to the service", async () => {
-      mockedSubmissionService.processSubmission.mockResolvedValue({
+      mockSubmissionService.processSubmission.mockResolvedValue({
         status: SubmissionStatus.ACCEPTED,
         finalGrade: 100,
         passedTests: 1,
@@ -88,7 +84,7 @@ describe("Integration: Submission Endpoints", () => {
         .send({ files, languageId: 7 });
 
       expect(response.status).toBe(200);
-      expect(mockedSubmissionService.processSubmission).toHaveBeenCalledWith(
+      expect(mockSubmissionService.processSubmission).toHaveBeenCalledWith(
         "1",
         files,
         "student-1",
@@ -107,11 +103,11 @@ describe("Integration: Submission Endpoints", () => {
         });
 
       expect(response.status).toBe(400);
-      expect(mockedSubmissionService.processSubmission).not.toHaveBeenCalled();
+      expect(mockSubmissionService.processSubmission).not.toHaveBeenCalled();
     });
 
     it("returns 403 when the activity forbids editing the starter code", async () => {
-      mockedSubmissionService.processSubmission.mockRejectedValue(
+      mockSubmissionService.processSubmission.mockRejectedValue(
         new Error("Esta actividad no permite modificar el código inicial.")
       );
 
@@ -124,7 +120,7 @@ describe("Integration: Submission Endpoints", () => {
     });
 
     it("returns 403 when the activity forbids adding files", async () => {
-      mockedSubmissionService.processSubmission.mockRejectedValue(
+      mockSubmissionService.processSubmission.mockRejectedValue(
         new Error("Esta actividad no permite agregar ni quitar archivos.")
       );
 
@@ -198,7 +194,7 @@ describe("Integration: Submission Endpoints", () => {
     });
 
     it("returns 404 when activity not found", async () => {
-      mockedSubmissionService.processSubmission.mockRejectedValue(
+      mockSubmissionService.processSubmission.mockRejectedValue(
         new Error("La actividad no existe.")
       );
 
@@ -214,7 +210,7 @@ describe("Integration: Submission Endpoints", () => {
     });
 
     it("returns 403 when max attempts reached", async () => {
-      mockedSubmissionService.processSubmission.mockRejectedValue(
+      mockSubmissionService.processSubmission.mockRejectedValue(
         new Error("Has alcanzado el límite máximo de intentos para esta actividad.")
       );
 

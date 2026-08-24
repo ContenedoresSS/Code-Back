@@ -1,10 +1,10 @@
 import { Router } from "express";
-import settingsController from "../controllers/settings.controller.js";
-import { authenticate } from "../middlewares/auth.middleware.js";
-import { rbac } from "../middlewares/rbac.middleware.js";
+import { container } from "../config/container.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import { updateEmailDomainsSchema } from "../validators/settings.validators.js";
 import { UserRole } from "../types/enums/role.enum.js";
+
+const { settingsController, authenticate, rbac } = container.cradle;
 
 const router = Router();
 

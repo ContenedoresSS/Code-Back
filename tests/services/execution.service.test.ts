@@ -44,7 +44,9 @@ vi.mock("dockerode", () => ({
   },
 }));
 
-import executionService from "../../src/services/execution.service.js";
+import { ExecutionService } from "../../src/services/execution.service.js";
+
+const executionService = new ExecutionService();
 
 interface FakeContainer {
   putArchive: ReturnType<typeof vi.fn>;

@@ -9,22 +9,37 @@ import type { ForgotPasswordRequest } from "../types/requests/forgot-password-re
 import type { VerifyResetCodeRequest } from "../types/requests/verify-reset-code-request.model.js";
 import type { VerifyResetCodeResponse } from "../types/responses/verify-reset-code-response.model.js";
 import type { ResetPasswordRequest } from "../types/requests/reset-password-request.model.js";
-import userService from "./user.service.js";
-import tokenService from "./token.service.js";
+import type { IUserService } from "./interfaces/user.service.interface.js";
+import type { ITokenService } from "./interfaces/token-service.interface.js";
+import type { IInvitationService } from "./interfaces/invitation.service.interface.js";
+import type { IMailProvider } from "./interfaces/mail-provider.interface.js";
+import type { PasswordResetTemplateVars, RenderedMail } from "./mail/mail-template.service.js";
+import type { ISettingService } from "./interfaces/setting.service.interface.js";
+import type { IAuthService } from "./interfaces/auth.service.interface.js";
 import type { TokenPayload } from "../types/models/tokens/token-payload.model.js";
-import invitationService from "./invitation.service.js";
-import mailProviderFactory from "./mail/mail-provider.factory.js";
-import mailTemplateService from "./mail/mail-template.service.js";
-import settingService from "./setting.service.js";
 import { EmailDomainNotAllowedError } from "./mail/email-domain-not-allowed.error.js";
 import { extractEmailDomain, isEmailDomainAllowed } from "../helpers/email-domain.helper.js";
 import { ENV } from "../config/env.config.js";
 
-class AuthService {
+type MailProviderFactoryLike = { create(): IMailProvider };
+type MailTemplateServiceLike = {
+  renderPasswordReset(vars: PasswordResetTemplateVars): RenderedMail;
+};
+
+export class AuthService implements IAuthService {
   readonly SALT_ROUNDS: number = 10;
 
+  constructor(
+    private readonly userService: IUserService,
+    private readonly tokenService: ITokenService,
+    private readonly invitationService: IInvitationService,
+    private readonly mailProviderFactory: MailProviderFactoryLike,
+    private readonly mailTemplateService: MailTemplateServiceLike,
+    private readonly settingService: ISettingService
+  ) {}
+
   public async register(data: RegisterUserRequest): Promise<RegisterUserReponse> {
-    const allowedDomains = await settingService.getAllowedEmailDomains();
+    const allowedDomains = await this.settingService.getAllowedEmailDomains();
 
     if (!isEmailDomainAllowed(data.email, allowedDomains)) {
       throw new EmailDomainNotAllowedError(extractEmailDomain(data.email));
@@ -35,7 +50,7 @@ class AuthService {
     const hashedPassword = await bcrypt.hash(data.password, this.SALT_ROUNDS);
 
     const newUser = await prisma.$transaction(async (tx) => {
-      const user = await userService.create(
+      const user = await this.userService.create(
         {
           email: data.email,
           passwordHash: hashedPassword,
@@ -48,7 +63,7 @@ class AuthService {
       );
 
       if (data.invitationCode) {
-        await invitationService.validateAndConsume(data.invitationCode, tx);
+        await this.invitationService.validateAndConsume(data.invitationCode, tx);
       }
 
       return user;
@@ -56,7 +71,7 @@ class AuthService {
 
     return {
       id: newUser.id,
-      username: newUser.username,
+      ...(newUser.username !== undefined ? { username: newUser.username } : {}),
       email: newUser.email,
       name: newUser.name,
       lastName: newUser.lastName,
@@ -97,7 +112,7 @@ class AuthService {
   }
 
   public async login(data: LoginRequest): Promise<LoginResponse> {
-    const user = await userService.findByAnyIdentifierAndRole(data.identifier);
+    const user = await this.userService.findByAnyIdentifierAndRole(data.identifier);
 
     if (!user) {
       throw new Error("Invalid credentials");
@@ -112,7 +127,7 @@ class AuthService {
       throw new Error("La cuenta está desactivada.");
     }
 
-    const pairTokens = await tokenService.generateTokenPair({
+    const pairTokens = await this.tokenService.generateTokenPair({
       sub: user.id,
       role: user.role.name,
       name: user.name,
@@ -125,8 +140,8 @@ class AuthService {
   }
 
   public async refreshAccessToken(refreshToken: string): Promise<LoginResponse> {
-    const decoded = tokenService.verifyRefreshToken(refreshToken);
-    const user = await userService.findByIdWithRole(decoded.sub);
+    const decoded = this.tokenService.verifyRefreshToken(refreshToken);
+    const user = await this.userService.findByIdWithRole(decoded.sub);
 
     if (!user) {
       throw new Error("User not found");
@@ -136,7 +151,7 @@ class AuthService {
       throw new Error("La cuenta está desactivada.");
     }
 
-    const tokenPair = await tokenService.generateTokenPair({
+    const tokenPair = await this.tokenService.generateTokenPair({
       sub: user.id,
       role: user.role.name,
       name: user.name,
@@ -149,9 +164,9 @@ class AuthService {
   }
 
   public async forgotPassword(data: ForgotPasswordRequest): Promise<void> {
-    const provider = mailProviderFactory.create();
+    const provider = this.mailProviderFactory.create();
 
-    const user = await userService.findByEmail(data.email);
+    const user = await this.userService.findByEmail(data.email);
 
     if (!user) {
       return;
@@ -161,9 +176,9 @@ class AuthService {
     const codeHash = await bcrypt.hash(code, this.SALT_ROUNDS);
     const expiresAt = new Date(Date.now() + ENV.RESET_CODE_TTL_MINUTES * 60_000);
 
-    await userService.saveResetCode(user.id, codeHash, expiresAt);
+    await this.userService.saveResetCode(user.id, codeHash, expiresAt);
 
-    const rendered = mailTemplateService.renderPasswordReset({
+    const rendered = this.mailTemplateService.renderPasswordReset({
       code,
       ttlMinutes: ENV.RESET_CODE_TTL_MINUTES,
     });
@@ -177,7 +192,7 @@ class AuthService {
   }
 
   public async verifyResetCode(data: VerifyResetCodeRequest): Promise<VerifyResetCodeResponse> {
-    const user = await userService.findByEmail(data.email);
+    const user = await this.userService.findByEmail(data.email);
 
     if (!user || !user.resetTokenHash || !user.resetTokenExpires) {
       throw new Error("Invalid or expired reset code");
@@ -192,21 +207,19 @@ class AuthService {
       throw new Error("Invalid or expired reset code");
     }
 
-    const resetToken = tokenService.generateResetToken(user.id);
+    const resetToken = this.tokenService.generateResetToken(user.id);
     return { resetToken };
   }
 
   public async resetPassword(data: ResetPasswordRequest): Promise<void> {
-    const userId = tokenService.verifyResetToken(data.resetToken);
+    const userId = this.tokenService.verifyResetToken(data.resetToken);
 
     const hashedPassword = await bcrypt.hash(data.newPassword, this.SALT_ROUNDS);
-    await userService.updatePassword(userId, hashedPassword);
-    await userService.clearResetCode(userId);
+    await this.userService.updatePassword(userId, hashedPassword);
+    await this.userService.clearResetCode(userId);
   }
 
   private generateResetCode(): string {
     return randomInt(0, 1_000_000).toString().padStart(6, "0");
   }
 }
-
-export default new AuthService();

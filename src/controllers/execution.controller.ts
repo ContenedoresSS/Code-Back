@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import type { RunCodeWithFilesBody } from "../types/requests/run-code-with-files.request.js";
-import ExecutionService from "../services/execution.service.js";
+import type { IExecutionService } from "../services/interfaces/execution.service.interface.js";
 import { isBase64 } from "../helpers/base64-validator.helper.js";
 import { QueueTimeoutError } from "../helpers/concurrency-limiter.helper.js";
 import { validateExecutionInputSize } from "../helpers/execution-size.helper.js";
@@ -11,8 +11,10 @@ const sizeLimits = {
   maxStdinBytes: ENV.EXECUTION_MAX_STDIN_BYTES,
 };
 
-class ExecutionController {
-  async run(req: Request, res: Response): Promise<Response> {
+export class ExecutionController {
+  constructor(private readonly executionService: IExecutionService) {}
+
+  run = async (req: Request, res: Response): Promise<Response> => {
     const { languageId, code, stdin } = req.body;
 
     try {
@@ -37,7 +39,7 @@ class ExecutionController {
         return res.status(400).json({ error: sizeError });
       }
 
-      const output = await ExecutionService.runCode(Number(languageId), code, stdin);
+      const output = await this.executionService.runCode(Number(languageId), code, stdin);
 
       return res.status(200).json(output);
     } catch (error: any) {
@@ -49,7 +51,7 @@ class ExecutionController {
         error: error.message,
       });
     }
-  }
+  };
 
   public runWithFiles = async (req: Request, res: Response): Promise<Response> => {
     try {
@@ -89,7 +91,12 @@ class ExecutionController {
         return res.status(400).json({ error: sizeError });
       }
 
-      const output = await ExecutionService.runCodeWithFiles(languageId, files, entryPoint, stdin);
+      const output = await this.executionService.runCodeWithFiles(
+        languageId,
+        files,
+        entryPoint,
+        stdin
+      );
 
       return res.status(200).json(output);
     } catch (error: any) {
@@ -111,5 +118,3 @@ class ExecutionController {
     }
   };
 }
-
-export default new ExecutionController();

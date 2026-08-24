@@ -1,12 +1,14 @@
 import prisma from "../config/prisma.js";
-import activityService from "./activity.service.js";
 import { UserRole } from "../types/enums/role.enum.js";
 import type { CreateTestCaseRequest } from "../types/requests/create-test-case-request.model.js";
 import type { UpdateTestCaseRequest } from "../types/requests/update-test-case-request.model.js";
 import type { TestCaseResponse } from "../types/responses/test-case-response.model.js";
 import type { ITestCaseService } from "./interfaces/test-case.service.interface.js";
+import type { IActivityService } from "./interfaces/activity.service.interface.js";
 
 export class TestCaseService implements ITestCaseService {
+  constructor(private readonly activityService: IActivityService) {}
+
   public async createTestCase(
     activityId: string,
     userRole: UserRole,
@@ -14,7 +16,7 @@ export class TestCaseService implements ITestCaseService {
     data: CreateTestCaseRequest
   ): Promise<TestCaseResponse> {
     try {
-      await activityService.getActivityById(activityId, userRole, userId);
+      await this.activityService.getActivityById(activityId, userRole, userId);
 
       const newTestCase = await prisma.testCase.create({
         data: {
@@ -37,7 +39,7 @@ export class TestCaseService implements ITestCaseService {
     userId: string
   ): Promise<TestCaseResponse[]> {
     try {
-      await activityService.getActivityById(activityId, userRole, userId);
+      await this.activityService.getActivityById(activityId, userRole, userId);
 
       const testCases = await prisma.testCase.findMany({
         where: { activityId },
@@ -58,7 +60,7 @@ export class TestCaseService implements ITestCaseService {
     data: UpdateTestCaseRequest
   ): Promise<TestCaseResponse> {
     try {
-      await activityService.getActivityById(activityId, userRole, userId);
+      await this.activityService.getActivityById(activityId, userRole, userId);
 
       const testCase = await prisma.testCase.findFirst({
         where: { id: testCaseId, activityId },
@@ -93,7 +95,7 @@ export class TestCaseService implements ITestCaseService {
     userId: string
   ): Promise<void> {
     try {
-      await activityService.getActivityById(activityId, userRole, userId);
+      await this.activityService.getActivityById(activityId, userRole, userId);
 
       const testCase = await prisma.testCase.findFirst({
         where: { id: testCaseId, activityId },
@@ -111,5 +113,3 @@ export class TestCaseService implements ITestCaseService {
     }
   }
 }
-
-export default new TestCaseService();

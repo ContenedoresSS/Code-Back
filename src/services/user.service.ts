@@ -5,6 +5,7 @@ import type { UpdateUserRequest } from "../types/requests/update-user-request.mo
 import type { UserListItemResponse } from "../types/responses/user-list-item-response.model.js";
 import type { PaginationData } from "../types/shared/pagination-data.shared.js";
 import { UserRole } from "../types/enums/role.enum.js";
+import type { IUserService } from "./interfaces/user.service.interface.js";
 
 const userListItemSelect = {
   id: true,
@@ -22,7 +23,7 @@ const toListItem = (user: Prisma.UserGetPayload<{ select: typeof userListItemSel
   createdAt: user.createdAt.toISOString(),
 });
 
-class UserService {
+export class UserService implements IUserService {
   async create(data: any, tx?: any) {
     const db = tx || prisma;
     return await db.user.create({ data });
@@ -243,5 +244,3 @@ class UserService {
     });
   }
 }
-
-export default new UserService();

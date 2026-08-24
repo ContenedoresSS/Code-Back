@@ -3,23 +3,25 @@ import type { CreateSubjectRequest } from "../types/requests/create-subject-requ
 import type { UpdateSubjectRequest } from "../types/requests/update-subject-request.model.js";
 import { getPaginationParams } from "../helpers/pagination.helper.js";
 import { parseIdParam } from "../helpers/param.helper.js";
-import subjectService from "../services/subject.service.js";
+import type { ISubjectService } from "../services/interfaces/subject.service.interface.js";
 import type { UserRole } from "../types/enums/role.enum.js";
 
-class SubjectController {
-  public async create(req: Request, res: Response) {
+export class SubjectController {
+  constructor(private readonly subjectService: ISubjectService) {}
+
+  public create = async (req: Request, res: Response) => {
     try {
       const data: CreateSubjectRequest = req.body;
       const userId = req.user as string;
 
-      const newSubject = await subjectService.createSubject(userId, data);
+      const newSubject = await this.subjectService.createSubject(userId, data);
       return res.status(201).json(newSubject);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async getAll(req: Request, res: Response) {
+  public getAll = async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user as string;
       const userRole = (req as any).role as UserRole;
@@ -29,7 +31,7 @@ class SubjectController {
       const searchParam = req.query.search;
       const searchTerm = typeof searchParam === "string" ? searchParam.trim() : undefined;
 
-      const paginatedSubjects = await subjectService.getSubjects(
+      const paginatedSubjects = await this.subjectService.getSubjects(
         userId,
         userRole,
         skip,
@@ -41,9 +43,9 @@ class SubjectController {
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async getOne(req: Request, res: Response) {
+  public getOne = async (req: Request, res: Response) => {
     try {
       const subjectId = parseIdParam(req.params.id);
       const userId = req.user as string;
@@ -53,7 +55,7 @@ class SubjectController {
         return res.status(400).json({ error: "El ID proporcionado no es válido." });
       }
 
-      const subject = await subjectService.getSubjectById(subjectId, userRole, userId);
+      const subject = await this.subjectService.getSubjectById(subjectId, userRole, userId);
       return res.status(200).json(subject);
     } catch (error: any) {
       if (error.message.includes("Materia no encontrada")) {
@@ -61,9 +63,9 @@ class SubjectController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async update(req: Request, res: Response) {
+  public update = async (req: Request, res: Response) => {
     try {
       const subjectId = parseIdParam(req.params.id);
       const userId = req.user as string;
@@ -74,7 +76,12 @@ class SubjectController {
         return res.status(400).json({ error: "El ID proporcionado no es válido." });
       }
 
-      const updatedSubject = await subjectService.updateSubject(subjectId, userRole, userId, data);
+      const updatedSubject = await this.subjectService.updateSubject(
+        subjectId,
+        userRole,
+        userId,
+        data
+      );
       return res.status(200).json(updatedSubject);
     } catch (error: any) {
       if (error.message.includes("Materia no encontrada")) {
@@ -82,9 +89,9 @@ class SubjectController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async delete(req: Request, res: Response) {
+  public delete = async (req: Request, res: Response) => {
     try {
       const subjectId = parseIdParam(req.params.id);
       const userId = req.user as string;
@@ -94,7 +101,7 @@ class SubjectController {
         return res.status(400).json({ error: "El ID proporcionado no es válido." });
       }
 
-      await subjectService.deleteSubject(subjectId, userRole, userId);
+      await this.subjectService.deleteSubject(subjectId, userRole, userId);
 
       return res.status(204).send();
     } catch (error: any) {
@@ -103,9 +110,9 @@ class SubjectController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async getStudents(req: Request, res: Response) {
+  public getStudents = async (req: Request, res: Response) => {
     try {
       const subjectId = parseIdParam(req.params.id);
       const userId = req.user as string;
@@ -120,7 +127,7 @@ class SubjectController {
       const searchParam = req.query.search;
       const searchTerm = typeof searchParam === "string" ? searchParam.trim() : undefined;
 
-      const paginatedStudents = await subjectService.getStudentsBySubject(
+      const paginatedStudents = await this.subjectService.getStudentsBySubject(
         subjectId,
         userRole,
         userId,
@@ -136,9 +143,9 @@ class SubjectController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async duplicate(req: Request, res: Response) {
+  public duplicate = async (req: Request, res: Response) => {
     try {
       const subjectId = parseIdParam(req.params.id);
       const userId = req.user as string;
@@ -149,7 +156,12 @@ class SubjectController {
         return res.status(400).json({ error: "El ID proporcionado no es válido." });
       }
 
-      const duplicated = await subjectService.duplicateSubject(subjectId, userRole, userId, data);
+      const duplicated = await this.subjectService.duplicateSubject(
+        subjectId,
+        userRole,
+        userId,
+        data
+      );
       return res.status(201).json(duplicated);
     } catch (error: unknown) {
       if (error instanceof Error && error.message.includes("Materia no encontrada")) {
@@ -159,7 +171,5 @@ class SubjectController {
         error: error instanceof Error ? error.message : "Error al duplicar la materia.",
       });
     }
-  }
+  };
 }
-
-export default new SubjectController();

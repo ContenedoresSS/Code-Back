@@ -3,22 +3,18 @@ import { ExecutionStatus } from "../../src/types/enums/execution-status.enum.js"
 import { SubmissionStatus } from "../../src/types/enums/submission-status.enum.js";
 import type { TestCase } from "@prisma/client";
 import type { CodeFile } from "../../src/types/models/execution/code-file.model.js";
+import { EvaluationService } from "../../src/services/evaluation.service.js";
 
-vi.mock("../../src/services/execution.service.js", () => ({
-  default: {
-    runCodeWithFiles: vi.fn(),
-  },
-}));
+const mockedExecutionService = {
+  runCode: vi.fn(),
+  runCodeWithFiles: vi.fn(),
+  pullAndPrepImage: vi.fn(),
+};
 
-import evaluationService from "../../src/services/evaluation.service.js";
-import executionService from "../../src/services/execution.service.js";
-
-const mockedExecutionService = vi.mocked(executionService);
+const evaluationService = new EvaluationService(mockedExecutionService);
 
 describe("EvaluationService", () => {
-  const mockFiles: CodeFile[] = [
-    { name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" },
-  ];
+  const mockFiles: CodeFile[] = [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }];
 
   const createTestCase = (input: string, expectedOutput: string): TestCase =>
     ({
@@ -35,16 +31,13 @@ describe("EvaluationService", () => {
 
   describe("evaluateSubmission", () => {
     it("throws error when no test cases provided", async () => {
-      await expect(
-        evaluationService.evaluateSubmission(1, [], mockFiles)
-      ).rejects.toThrow("La actividad no tiene casos de prueba configurados");
+      await expect(evaluationService.evaluateSubmission(1, [], mockFiles)).rejects.toThrow(
+        "La actividad no tiene casos de prueba configurados"
+      );
     });
 
     it("returns ACCEPTED with grade 100 when all tests pass", async () => {
-      const testCases = [
-        createTestCase("input1", "output1"),
-        createTestCase("input2", "output2"),
-      ];
+      const testCases = [createTestCase("input1", "output1"), createTestCase("input2", "output2")];
 
       mockedExecutionService.runCodeWithFiles
         .mockResolvedValueOnce({
@@ -69,10 +62,7 @@ describe("EvaluationService", () => {
     });
 
     it("returns WRONG_ANSWER with proportional grade when some tests fail", async () => {
-      const testCases = [
-        createTestCase("input1", "output1"),
-        createTestCase("input2", "output2"),
-      ];
+      const testCases = [createTestCase("input1", "output1"), createTestCase("input2", "output2")];
 
       mockedExecutionService.runCodeWithFiles
         .mockResolvedValueOnce({
@@ -97,10 +87,7 @@ describe("EvaluationService", () => {
     });
 
     it("returns COMPILE_ERROR with grade 0 and aborts on compile error", async () => {
-      const testCases = [
-        createTestCase("input1", "output1"),
-        createTestCase("input2", "output2"),
-      ];
+      const testCases = [createTestCase("input1", "output1"), createTestCase("input2", "output2")];
 
       mockedExecutionService.runCodeWithFiles.mockResolvedValueOnce({
         status: ExecutionStatus.COMPILE_ERROR,
@@ -118,10 +105,7 @@ describe("EvaluationService", () => {
     });
 
     it("returns RUNTIME_ERROR with grade 0 and aborts on runtime error", async () => {
-      const testCases = [
-        createTestCase("input1", "output1"),
-        createTestCase("input2", "output2"),
-      ];
+      const testCases = [createTestCase("input1", "output1"), createTestCase("input2", "output2")];
 
       mockedExecutionService.runCodeWithFiles.mockResolvedValueOnce({
         status: ExecutionStatus.RUNTIME_ERROR,
@@ -139,10 +123,7 @@ describe("EvaluationService", () => {
     });
 
     it("returns TIME_LIMIT_EXCEEDED with grade 0 and aborts on timeout", async () => {
-      const testCases = [
-        createTestCase("input1", "output1"),
-        createTestCase("input2", "output2"),
-      ];
+      const testCases = [createTestCase("input1", "output1"), createTestCase("input2", "output2")];
 
       mockedExecutionService.runCodeWithFiles.mockResolvedValueOnce({
         status: ExecutionStatus.TIME_LIMIT_EXCEEDED,

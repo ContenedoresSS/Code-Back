@@ -42,7 +42,9 @@ vi.mock("dockerode", () => ({
   },
 }));
 
-import executionService from "../../src/services/execution.service.js";
+import { ExecutionService } from "../../src/services/execution.service.js";
+
+const executionService = new ExecutionService();
 
 const mockLanguage: ProgrammingLanguage = {
   id: 1,

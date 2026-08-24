@@ -1,10 +1,10 @@
 import type { CodeFile } from "../types/models/execution/code-file.model.js";
 import type { SubmissionResult } from "../types/responses/submission-result.response.js";
 import type { ISubmissionService } from "./interfaces/submission.service.interface.js";
+import type { IEvaluationService } from "./interfaces/evaluation.service.interface.js";
+import type { IEnrollmentService } from "./interfaces/enrollment.service.interface.js";
 import type { Prisma } from "@prisma/client";
 import prisma from "../config/prisma.js";
-import evaluationService from "./evaluation.service.js";
-import enrollmentService from "./enrollment.service.js";
 import { resolveActivityRules } from "../helpers/activity-rules.helper.js";
 import { QueueTimeoutError } from "../helpers/concurrency-limiter.helper.js";
 import {
@@ -14,6 +14,11 @@ import {
 } from "../helpers/submission-rules.helper.js";
 
 export class SubmissionService implements ISubmissionService {
+  constructor(
+    private readonly evaluationService: IEvaluationService,
+    private readonly enrollmentService: IEnrollmentService
+  ) {}
+
   // Sin starterCode no hay referencia contra la que comparar, así que las reglas
   // no se aplican: bloquear dejaría la actividad inentregable.
   private assertSubmissionAllowed(
@@ -102,10 +107,10 @@ export class SubmissionService implements ISubmissionService {
           }
         }
 
-        await enrollmentService.ensureEnrollment(userId, activity.subjectId);
+        await this.enrollmentService.ensureEnrollment(userId, activity.subjectId);
       }
 
-      const evaluationResult = await evaluationService.evaluateSubmission(
+      const evaluationResult = await this.evaluationService.evaluateSubmission(
         languageId,
         activity.testCases,
         files
@@ -149,5 +154,3 @@ export class SubmissionService implements ISubmissionService {
     }
   }
 }
-
-export default new SubmissionService();
