@@ -13,7 +13,9 @@ vi.mock("../../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-import settingService from "../../src/services/setting.service.js";
+import { SettingService } from "../../src/services/setting.service.js";
+
+const settingService = new SettingService();
 
 describe("SettingService", () => {
   beforeEach(() => {

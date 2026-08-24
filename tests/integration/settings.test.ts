@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import app from "../../src/app.js";
-import settingService from "../../src/services/setting.service.js";
 import { generateGodToken, generateTeacherToken, generateStudentToken } from "./helpers/tokens.js";
-
-vi.mock("../../src/services/setting.service.js");
-
-const mockedSettingService = vi.mocked(settingService);
+import { mockSettingService } from "./helpers/register-mocks.js";
+import app from "../../src/app.js";
 
 describe("Integration: Settings Endpoints", () => {
   beforeEach(() => {
@@ -15,7 +11,7 @@ describe("Integration: Settings Endpoints", () => {
 
   describe("GET /api/v1/settings/email-domains", () => {
     it("returns the allowed email domains for God role", async () => {
-      mockedSettingService.getAllowedEmailDomains.mockResolvedValue(["uady.mx"]);
+      mockSettingService.getAllowedEmailDomains.mockResolvedValue(["uady.mx"]);
 
       const token = generateGodToken("god-1");
       const response = await request(app)
@@ -44,7 +40,7 @@ describe("Integration: Settings Endpoints", () => {
 
   describe("PUT /api/v1/settings/email-domains", () => {
     it("updates the allowed email domains for God role", async () => {
-      mockedSettingService.setAllowedEmailDomains.mockResolvedValue(["uady.mx", "gmail.com"]);
+      mockSettingService.setAllowedEmailDomains.mockResolvedValue(["uady.mx", "gmail.com"]);
 
       const token = generateGodToken("god-1");
       const response = await request(app)
@@ -54,7 +50,7 @@ describe("Integration: Settings Endpoints", () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ domains: ["uady.mx", "gmail.com"] });
-      expect(mockedSettingService.setAllowedEmailDomains).toHaveBeenCalledWith([
+      expect(mockSettingService.setAllowedEmailDomains).toHaveBeenCalledWith([
         "uady.mx",
         "gmail.com",
       ]);

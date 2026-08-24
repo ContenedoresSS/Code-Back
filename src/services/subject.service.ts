@@ -281,5 +281,3 @@ export class SubjectService implements ISubjectService {
     }
   }
 }
-
-export default new SubjectService();

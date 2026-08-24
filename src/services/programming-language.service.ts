@@ -2,17 +2,20 @@ import prisma from "../config/prisma.js";
 import type { CreateLanguageRequest } from "../types/requests/create-language.request.js";
 import type { UpdateLanguageRequest } from "../types/requests/update-language.response.js";
 import type { LanguageResponse } from "../types/responses/language-response.model.js";
-import ExecutionService from "./execution.service.js";
+import type { IProgrammingLanguageService } from "./interfaces/programming-language.service.interface.js";
+import type { IExecutionService } from "./interfaces/execution.service.interface.js";
 
-class ProgrammingLanguageService {
-  async create(data: CreateLanguageRequest, tx?: any): Promise<LanguageResponse> {
+export class ProgrammingLanguageService implements IProgrammingLanguageService {
+  constructor(private readonly executionService: IExecutionService) {}
+
+  async create(data: CreateLanguageRequest, tx?: unknown): Promise<LanguageResponse> {
     try {
       const newLanguage = await prisma.programmingLanguage.create({ data });
-      ExecutionService.pullAndPrepImage(newLanguage.dockerImage);
+      this.executionService.pullAndPrepImage(newLanguage.dockerImage);
 
       return newLanguage;
-    } catch (error: any) {
-      if (error.code === "P2002") {
+    } catch (error: unknown) {
+      if (isPrismaError(error) && error.code === "P2002") {
         throw new Error("The combination of name and version already exists.");
       }
       throw new Error("Error creating the programming language.");
@@ -24,7 +27,7 @@ class ProgrammingLanguageService {
       return await prisma.programmingLanguage.findMany({
         orderBy: { name: "asc" },
       });
-    } catch (error) {
+    } catch (error: unknown) {
       throw new Error("Error fetching programming languages.");
     }
   }
@@ -36,8 +39,8 @@ class ProgrammingLanguageService {
       });
       if (!language) throw new Error("Language not found.");
       return language;
-    } catch (error: any) {
-      throw new Error(error.message || "Error fetching the language.");
+    } catch (error: unknown) {
+      throw new Error(error instanceof Error ? error.message : "Error fetching the language.");
     }
   }
 
@@ -47,8 +50,9 @@ class ProgrammingLanguageService {
         where: { id },
         data,
       });
-    } catch (error: any) {
-      if (error.code === "P2025") throw new Error("Language not found to update.");
+    } catch (error: unknown) {
+      if (isPrismaError(error) && error.code === "P2025")
+        throw new Error("Language not found to update.");
       throw new Error("Error updating the language.");
     }
   }
@@ -59,11 +63,19 @@ class ProgrammingLanguageService {
         where: { id },
       });
       return { message: "Language deleted successfully." };
-    } catch (error: any) {
-      if (error.code === "P2025") throw new Error("Language not found to delete.");
+    } catch (error: unknown) {
+      if (isPrismaError(error) && error.code === "P2025")
+        throw new Error("Language not found to delete.");
       throw new Error("Error deleting the language.");
     }
   }
 }
 
-export default new ProgrammingLanguageService();
+function isPrismaError(error: unknown): error is { code: string } {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as { code: unknown }).code === "string"
+  );
+}

@@ -34,10 +34,11 @@ vi.mock("../../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-import activityService from "../../src/services/activity.service.js";
+import { ActivityService } from "../../src/services/activity.service.js";
 import { UserRole } from "../../src/types/enums/role.enum.js";
 import { getDefaultActivityRules } from "../../src/helpers/activity-rules.helper.js";
 
+const activityService = new ActivityService();
 const DEFAULT_RULES = getDefaultActivityRules();
 
 describe("ActivityService", () => {

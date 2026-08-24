@@ -1,19 +1,19 @@
 import type { Request, Response } from "express";
 import type { CreateActivityRequest } from "../types/requests/create-activity-request.model.js";
 import type { UpdateActivityRequest } from "../types/requests/update-activity-request.model.js";
-import { ActivityService } from "../services/activity.service.js";
+import type { IActivityService } from "../services/interfaces/activity.service.interface.js";
 import { parseStringParam } from "../helpers/param.helper.js";
 import { getPaginationParams } from "../helpers/pagination.helper.js";
 
-const activityService = new ActivityService();
+export class ActivityController {
+  constructor(private readonly activityService: IActivityService) {}
 
-class ActivityController {
-  public async create(req: Request, res: Response) {
+  public create = async (req: Request, res: Response) => {
     try {
       const data: CreateActivityRequest = req.body;
       const userId = (req as any).user as string;
 
-      const newActivity = await activityService.createActivity(userId, data);
+      const newActivity = await this.activityService.createActivity(userId, data);
       return res.status(201).json(newActivity);
     } catch (error: any) {
       if (error.message.includes("curso no existe") || error.message.includes("lenguaje")) {
@@ -21,9 +21,9 @@ class ActivityController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async getAll(req: Request, res: Response) {
+  public getAll = async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user as string;
       const userRole = (req as any).role;
@@ -35,7 +35,7 @@ class ActivityController {
         typeof subjectQuery === "string" ? parseInt(subjectQuery, 10) : undefined;
       const subjectId = parsedSubjectId && !isNaN(parsedSubjectId) ? parsedSubjectId : undefined;
 
-      const paginatedActivities = await activityService.getAllActivities(
+      const paginatedActivities = await this.activityService.getAllActivities(
         userId,
         userRole,
         skip,
@@ -47,9 +47,9 @@ class ActivityController {
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async getOne(req: Request, res: Response) {
+  public getOne = async (req: Request, res: Response) => {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
       const userId = (req as any).user as string;
@@ -59,7 +59,7 @@ class ActivityController {
         return res.status(400).json({ error: "El ID de la actividad es requerido." });
       }
 
-      const activity = await activityService.getActivityById(activityId, userRole, userId);
+      const activity = await this.activityService.getActivityById(activityId, userRole, userId);
       return res.status(200).json(activity);
     } catch (error: any) {
       if (error.message.includes("Actividad no encontrada")) {
@@ -67,9 +67,9 @@ class ActivityController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async update(req: Request, res: Response) {
+  public update = async (req: Request, res: Response) => {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
       const userId = (req as any).user as string;
@@ -80,7 +80,7 @@ class ActivityController {
         return res.status(400).json({ error: "El ID de la actividad es requerido." });
       }
 
-      const updatedActivity = await activityService.updateActivity(
+      const updatedActivity = await this.activityService.updateActivity(
         activityId,
         userRole,
         userId,
@@ -93,9 +93,9 @@ class ActivityController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async delete(req: Request, res: Response) {
+  public delete = async (req: Request, res: Response) => {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
       const userId = (req as any).user as string;
@@ -105,7 +105,7 @@ class ActivityController {
         return res.status(400).json({ error: "El ID de la actividad es requerido." });
       }
 
-      await activityService.deleteActivity(activityId, userRole, userId);
+      await this.activityService.deleteActivity(activityId, userRole, userId);
       return res.status(204).send();
     } catch (error: any) {
       if (error.message.includes("Actividad no encontrada")) {
@@ -113,9 +113,9 @@ class ActivityController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async getGrades(req: Request, res: Response) {
+  public getGrades = async (req: Request, res: Response) => {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
       const userId = (req as any).user as string;
@@ -126,7 +126,7 @@ class ActivityController {
       const searchParam = req.query.search;
       const searchTerm = typeof searchParam === "string" ? searchParam.trim() : undefined;
 
-      const paginatedGrades = await activityService.getActivityGrades(
+      const paginatedGrades = await this.activityService.getActivityGrades(
         activityId,
         userRole,
         userId,
@@ -145,16 +145,16 @@ class ActivityController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async getSubmissionDetail(req: Request, res: Response) {
+  public getSubmissionDetail = async (req: Request, res: Response) => {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
       const submissionId = parseStringParam(req.params.submissionId, "ID del envío");
       const userId = (req as any).user as string;
       const userRole = (req as any).role;
 
-      const detail = await activityService.getSubmissionDetail(
+      const detail = await this.activityService.getSubmissionDetail(
         activityId,
         submissionId,
         userRole,
@@ -174,13 +174,13 @@ class ActivityController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async getWorkspace(req: Request, res: Response) {
+  public getWorkspace = async (req: Request, res: Response) => {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
 
-      const workspaceData = await activityService.getWorkspaceForStudent(activityId);
+      const workspaceData = await this.activityService.getWorkspaceForStudent(activityId);
       return res.status(200).json(workspaceData);
     } catch (error: any) {
       if (error.message.includes("no existe")) {
@@ -188,7 +188,5 @@ class ActivityController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 }
-
-export default new ActivityController();

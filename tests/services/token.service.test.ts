@@ -4,7 +4,9 @@ import jwt from "jsonwebtoken";
 process.env.JWT_SECRET = "test-secret-minimum-20-chars";
 process.env.JWT_REFRESH_SECRET = "test-refresh-secret-min-20-chars";
 
-import tokenService from "../../src/services/token.service.js";
+import { TokenService } from "../../src/services/token.service.js";
+
+const tokenService = new TokenService();
 
 describe("TokenService", () => {
   const testPayload = {
@@ -83,11 +85,9 @@ describe("TokenService", () => {
     });
 
     it("throws error for expired token", async () => {
-      const expiredToken = jwt.sign(
-        { sub: "user-123" },
-        process.env.JWT_REFRESH_SECRET!,
-        { expiresIn: "0s" }
-      );
+      const expiredToken = jwt.sign({ sub: "user-123" }, process.env.JWT_REFRESH_SECRET!, {
+        expiresIn: "0s",
+      });
 
       expect(() => tokenService.verifyRefreshToken(expiredToken)).toThrow(
         "Invalid or expired refresh token"

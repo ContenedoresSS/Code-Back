@@ -1,11 +1,13 @@
 import type { Request, Response } from "express";
-import userService from "../services/user.service.js";
+import type { IUserService } from "../services/interfaces/user.service.interface.js";
 import { getPaginationParams } from "../helpers/pagination.helper.js";
 import { parseStringParam } from "../helpers/param.helper.js";
 import type { UpdateUserRequest } from "../types/requests/update-user-request.model.js";
 
-class UserAdminController {
-  public async list(req: Request, res: Response) {
+export class UserAdminController {
+  constructor(private readonly userService: IUserService) {}
+
+  public list = async (req: Request, res: Response) => {
     try {
       const { skip, take } = getPaginationParams(req);
 
@@ -16,20 +18,20 @@ class UserAdminController {
       const search =
         typeof searchParam === "string" && searchParam.trim() ? searchParam.trim() : undefined;
 
-      const paginatedUsers = await userService.listUsers(role, search, skip, take);
+      const paginatedUsers = await this.userService.listUsers(role, search, skip, take);
 
       return res.status(200).json(paginatedUsers);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 
-  public async update(req: Request, res: Response) {
+  public update = async (req: Request, res: Response) => {
     try {
       const userId = parseStringParam(req.params.id, "ID de usuario");
       const data: UpdateUserRequest = req.body;
 
-      const updatedUser = await userService.updateUserByAdmin(userId, data);
+      const updatedUser = await this.userService.updateUserByAdmin(userId, data);
 
       return res.status(200).json(updatedUser);
     } catch (error: any) {
@@ -41,7 +43,5 @@ class UserAdminController {
       }
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 }
-
-export default new UserAdminController();

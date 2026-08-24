@@ -3,8 +3,9 @@ import type { PaginationData } from "../types/shared/pagination-data.shared.js";
 import type { InvitationDTO } from "../types/dtos/invitations/invitation.dto.js";
 import { randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
+import type { IInvitationService } from "./interfaces/invitation.service.interface.js";
 
-class InvitationService {
+export class InvitationService implements IInvitationService {
   async getAll(page: number = 1, limit: number = 10): Promise<PaginationData<InvitationDTO>> {
     const skip = (page - 1) * limit;
 
@@ -68,5 +69,3 @@ class InvitationService {
     }
   }
 }
-
-export default new InvitationService();

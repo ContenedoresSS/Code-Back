@@ -1,9 +1,10 @@
 import prisma from "../config/prisma.js";
 import { normalizeDomain } from "../helpers/email-domain.helper.js";
+import type { ISettingService } from "./interfaces/setting.service.interface.js";
 
 const ALLOWED_EMAIL_DOMAINS_KEY = "allowedEmailDomains";
 
-class SettingService {
+export class SettingService implements ISettingService {
   public async getAllowedEmailDomains(): Promise<string[]> {
     const record = await prisma.appSetting.findUnique({
       where: { key: ALLOWED_EMAIL_DOMAINS_KEY },
@@ -35,5 +36,3 @@ class SettingService {
     return value.filter((item): item is string => typeof item === "string");
   }
 }
-
-export default new SettingService();

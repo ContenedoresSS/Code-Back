@@ -1,10 +1,12 @@
 import type { Request, Response } from "express";
-import UserService from "../services/user.service.js";
+import type { IUserService } from "../services/interfaces/user.service.interface.js";
 import type { UpdateProfileRequest } from "../types/requests/update-profile-request.model.js";
 import type { ChangePasswordRequest } from "../types/requests/change-password-request.model.js";
 import bcrypt from "bcrypt";
 
-class UserController {
+export class UserController {
+  constructor(private readonly userService: IUserService) {}
+
   public getProfile = async (req: Request, res: Response): Promise<void> => {
     try {
       const userId = req.user;
@@ -14,7 +16,7 @@ class UserController {
         return;
       }
 
-      const profile = await UserService.getProfile(userId);
+      const profile = await this.userService.getProfile(userId);
 
       res.status(200).json({
         success: true,
@@ -39,7 +41,7 @@ class UserController {
         Object.entries(body).filter(([_, v]) => v !== undefined)
       );
 
-      const updatedProfile = await UserService.updateProfile(userId, updateData);
+      const updatedProfile = await this.userService.updateProfile(userId, updateData);
 
       res.status(200).json({
         success: true,
@@ -67,7 +69,7 @@ class UserController {
         return;
       }
 
-      const currentHash = await UserService.getPasswordHash(userId);
+      const currentHash = await this.userService.getPasswordHash(userId);
 
       const isPasswordValid = await bcrypt.compare(currentPassword, currentHash);
       if (!isPasswordValid) {
@@ -76,7 +78,7 @@ class UserController {
       }
 
       const newHash = await bcrypt.hash(newPassword, 10);
-      await UserService.updatePassword(userId, newHash);
+      await this.userService.updatePassword(userId, newHash);
 
       res.status(200).json({
         success: true,
@@ -87,5 +89,3 @@ class UserController {
     }
   };
 }
-
-export default new UserController();

@@ -23,7 +23,7 @@ interface WaitOutcome {
   statusCode: number;
 }
 
-class ExecutionService implements IExecutionService {
+export class ExecutionService implements IExecutionService {
   private docker: Docker;
   private readonly limiter: ConcurrencyLimiter;
 
@@ -240,5 +240,3 @@ class ExecutionService implements IExecutionService {
     }
   }
 }
-
-export default new ExecutionService();

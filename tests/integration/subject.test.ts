@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import app from "../../src/app.js";
-import subjectService from "../../src/services/subject.service.js";
 import { generateTeacherToken, generateStudentToken, generateGodToken } from "./helpers/tokens.js";
-
-vi.mock("../../src/services/subject.service.js");
-
-const mockedSubjectService = vi.mocked(subjectService);
+import { mockSubjectService } from "./helpers/register-mocks.js";
+import app from "../../src/app.js";
 
 describe("Integration: Subject Endpoints", () => {
   beforeEach(() => {
@@ -23,7 +19,7 @@ describe("Integration: Subject Endpoints", () => {
         totalCount: 2,
       };
 
-      mockedSubjectService.getSubjects.mockResolvedValue(mockSubjects);
+      mockSubjectService.getSubjects.mockResolvedValue(mockSubjects);
 
       const token = generateTeacherToken();
       const response = await request(app)
@@ -45,7 +41,7 @@ describe("Integration: Subject Endpoints", () => {
         totalCount: 2,
       };
 
-      mockedSubjectService.getSubjects.mockResolvedValue(mockSubjects);
+      mockSubjectService.getSubjects.mockResolvedValue(mockSubjects);
 
       const token = generateGodToken();
       const response = await request(app)
@@ -62,7 +58,7 @@ describe("Integration: Subject Endpoints", () => {
         totalCount: 1,
       };
 
-      mockedSubjectService.getSubjects.mockResolvedValue(mockSubjects);
+      mockSubjectService.getSubjects.mockResolvedValue(mockSubjects);
 
       const token = generateStudentToken("student-1");
       const response = await request(app)
@@ -71,7 +67,7 @@ describe("Integration: Subject Endpoints", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveLength(1);
-      expect(mockedSubjectService.getSubjects).toHaveBeenCalledWith(
+      expect(mockSubjectService.getSubjects).toHaveBeenCalledWith(
         "student-1",
         "Student",
         0,
@@ -92,7 +88,7 @@ describe("Integration: Subject Endpoints", () => {
         totalCount: 10,
       };
 
-      mockedSubjectService.getSubjects.mockResolvedValue(mockSubjects);
+      mockSubjectService.getSubjects.mockResolvedValue(mockSubjects);
 
       const token = generateTeacherToken();
       const response = await request(app)
@@ -109,7 +105,7 @@ describe("Integration: Subject Endpoints", () => {
         totalCount: 1,
       };
 
-      mockedSubjectService.getSubjects.mockResolvedValue(mockSubjects);
+      mockSubjectService.getSubjects.mockResolvedValue(mockSubjects);
 
       const token = generateTeacherToken();
       const response = await request(app)
@@ -125,7 +121,7 @@ describe("Integration: Subject Endpoints", () => {
     it("returns subject when found and owned by user", async () => {
       const mockSubject = { id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null };
 
-      mockedSubjectService.getSubjectById.mockResolvedValue(mockSubject);
+      mockSubjectService.getSubjectById.mockResolvedValue(mockSubject);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -138,7 +134,7 @@ describe("Integration: Subject Endpoints", () => {
     });
 
     it("returns 404 when subject not found", async () => {
-      mockedSubjectService.getSubjectById.mockRejectedValue(
+      mockSubjectService.getSubjectById.mockRejectedValue(
         new Error("Materia no encontrada o no tienes permisos para acceder a ella.")
       );
 
@@ -153,7 +149,7 @@ describe("Integration: Subject Endpoints", () => {
     it("forwards the God role to access any subject", async () => {
       const mockSubject = { id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null };
 
-      mockedSubjectService.getSubjectById.mockResolvedValue(mockSubject);
+      mockSubjectService.getSubjectById.mockResolvedValue(mockSubject);
 
       const token = generateGodToken("god-1");
       const response = await request(app)
@@ -162,7 +158,7 @@ describe("Integration: Subject Endpoints", () => {
 
       expect(response.status).toBe(200);
       expect(response.body.id).toBe(1);
-      expect(mockedSubjectService.getSubjectById).toHaveBeenCalledWith(1, "God", "god-1");
+      expect(mockSubjectService.getSubjectById).toHaveBeenCalledWith(1, "God", "god-1");
     });
 
     it("returns 400 when ID is invalid", async () => {
@@ -179,7 +175,7 @@ describe("Integration: Subject Endpoints", () => {
     it("creates subject for Teacher role", async () => {
       const mockSubject = { id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null };
 
-      mockedSubjectService.createSubject.mockResolvedValue(mockSubject);
+      mockSubjectService.createSubject.mockResolvedValue(mockSubject);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -199,7 +195,7 @@ describe("Integration: Subject Endpoints", () => {
         imageUrl: "https://example.com/image.jpg",
       };
 
-      mockedSubjectService.createSubject.mockResolvedValue(mockSubject);
+      mockSubjectService.createSubject.mockResolvedValue(mockSubject);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -234,7 +230,7 @@ describe("Integration: Subject Endpoints", () => {
     it("allows God role to create subject", async () => {
       const mockSubject = { id: 1, name: "Mathematics", userId: "god-1", imageUrl: null };
 
-      mockedSubjectService.createSubject.mockResolvedValue(mockSubject);
+      mockSubjectService.createSubject.mockResolvedValue(mockSubject);
 
       const token = generateGodToken();
       const response = await request(app)
@@ -246,7 +242,7 @@ describe("Integration: Subject Endpoints", () => {
     });
 
     it("returns 400 when service throws error", async () => {
-      mockedSubjectService.createSubject.mockRejectedValue(new Error("Error al crear el curso"));
+      mockSubjectService.createSubject.mockRejectedValue(new Error("Error al crear el curso"));
 
       const token = generateTeacherToken();
       const response = await request(app)
@@ -267,7 +263,7 @@ describe("Integration: Subject Endpoints", () => {
         imageUrl: null,
       };
 
-      mockedSubjectService.updateSubject.mockResolvedValue(mockSubject);
+      mockSubjectService.updateSubject.mockResolvedValue(mockSubject);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -287,7 +283,7 @@ describe("Integration: Subject Endpoints", () => {
         imageUrl: "https://example.com/new-image.jpg",
       };
 
-      mockedSubjectService.updateSubject.mockResolvedValue(mockSubject);
+      mockSubjectService.updateSubject.mockResolvedValue(mockSubject);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -302,7 +298,7 @@ describe("Integration: Subject Endpoints", () => {
     it("returns 200 with existing subject when body is empty", async () => {
       const existingSubject = { id: 1, name: "Mathematics", userId: "teacher-1", imageUrl: null };
 
-      mockedSubjectService.updateSubject.mockResolvedValue(existingSubject);
+      mockSubjectService.updateSubject.mockResolvedValue(existingSubject);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -317,7 +313,7 @@ describe("Integration: Subject Endpoints", () => {
 
   describe("DELETE /api/v1/subject/:id", () => {
     it("deletes subject for owner", async () => {
-      mockedSubjectService.deleteSubject.mockResolvedValue();
+      mockSubjectService.deleteSubject.mockResolvedValue();
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -335,7 +331,7 @@ describe("Integration: Subject Endpoints", () => {
         activitiesCloned: 2,
         testCasesCloned: 4,
       };
-      mockedSubjectService.duplicateSubject.mockResolvedValue(mockDuplicate);
+      mockSubjectService.duplicateSubject.mockResolvedValue(mockDuplicate);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -348,7 +344,7 @@ describe("Integration: Subject Endpoints", () => {
       expect(response.body.subject.name).toBe("Mathematics (copia)");
       expect(response.body.activitiesCloned).toBe(2);
       expect(response.body.testCasesCloned).toBe(4);
-      expect(mockedSubjectService.duplicateSubject).toHaveBeenCalledWith(
+      expect(mockSubjectService.duplicateSubject).toHaveBeenCalledWith(
         1,
         "Teacher",
         "teacher-1",
@@ -366,7 +362,7 @@ describe("Integration: Subject Endpoints", () => {
     });
 
     it("returns 404 when subject not found", async () => {
-      mockedSubjectService.duplicateSubject.mockRejectedValue(
+      mockSubjectService.duplicateSubject.mockRejectedValue(
         new Error("Materia no encontrada o no tienes permisos para acceder a ella.")
       );
 

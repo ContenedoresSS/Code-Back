@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import app from "../../src/app.js";
-import enrollmentService from "../../src/services/enrollment.service.js";
 import { generateTeacherToken, generateStudentToken, generateGodToken } from "./helpers/tokens.js";
-
-vi.mock("../../src/services/enrollment.service.js");
-
-const mockedEnrollmentService = vi.mocked(enrollmentService);
+import { mockEnrollmentService } from "./helpers/register-mocks.js";
+import app from "../../src/app.js";
 
 describe("Integration: Enrollment Endpoints", () => {
   beforeEach(() => {
@@ -22,7 +18,7 @@ describe("Integration: Enrollment Endpoints", () => {
         createdAt: new Date().toISOString(),
       };
 
-      mockedEnrollmentService.enrollStudent.mockResolvedValue(mockEnrollment);
+      mockEnrollmentService.enrollStudent.mockResolvedValue(mockEnrollment);
 
       const token = generateStudentToken("student-1");
       const response = await request(app)
@@ -53,7 +49,7 @@ describe("Integration: Enrollment Endpoints", () => {
         createdAt: new Date().toISOString(),
       };
 
-      mockedEnrollmentService.enrollStudent.mockResolvedValue(mockEnrollment);
+      mockEnrollmentService.enrollStudent.mockResolvedValue(mockEnrollment);
 
       const token = generateGodToken("god-1");
       const response = await request(app)
@@ -85,7 +81,7 @@ describe("Integration: Enrollment Endpoints", () => {
     });
 
     it("returns 400 when subject does not exist", async () => {
-      mockedEnrollmentService.enrollStudent.mockRejectedValue(new Error("La materia no existe."));
+      mockEnrollmentService.enrollStudent.mockRejectedValue(new Error("La materia no existe."));
 
       const token = generateStudentToken();
       const response = await request(app)
@@ -98,7 +94,7 @@ describe("Integration: Enrollment Endpoints", () => {
     });
 
     it("returns 409 when already enrolled", async () => {
-      mockedEnrollmentService.enrollStudent.mockRejectedValue(
+      mockEnrollmentService.enrollStudent.mockRejectedValue(
         new Error("Ya estas inscrito en esta materia.")
       );
 
@@ -134,7 +130,7 @@ describe("Integration: Enrollment Endpoints", () => {
         totalCount: 1,
       };
 
-      mockedEnrollmentService.getEnrollments.mockResolvedValue(mockEnrollments);
+      mockEnrollmentService.getEnrollments.mockResolvedValue(mockEnrollments);
 
       const token = generateStudentToken("student-1");
       const response = await request(app)
@@ -162,7 +158,7 @@ describe("Integration: Enrollment Endpoints", () => {
         totalCount: 1,
       };
 
-      mockedEnrollmentService.getEnrollments.mockResolvedValue(mockEnrollments);
+      mockEnrollmentService.getEnrollments.mockResolvedValue(mockEnrollments);
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -192,7 +188,7 @@ describe("Integration: Enrollment Endpoints", () => {
         totalCount: 2,
       };
 
-      mockedEnrollmentService.getEnrollments.mockResolvedValue(mockEnrollments);
+      mockEnrollmentService.getEnrollments.mockResolvedValue(mockEnrollments);
 
       const token = generateGodToken();
       const response = await request(app)
@@ -216,7 +212,7 @@ describe("Integration: Enrollment Endpoints", () => {
         totalCount: 5,
       };
 
-      mockedEnrollmentService.getEnrollments.mockResolvedValue(mockEnrollments);
+      mockEnrollmentService.getEnrollments.mockResolvedValue(mockEnrollments);
 
       const token = generateStudentToken();
       const response = await request(app)
@@ -240,7 +236,7 @@ describe("Integration: Enrollment Endpoints", () => {
         totalCount: 1,
       };
 
-      mockedEnrollmentService.getEnrollments.mockResolvedValue(mockEnrollments);
+      mockEnrollmentService.getEnrollments.mockResolvedValue(mockEnrollments);
 
       const token = generateStudentToken();
       const response = await request(app)
@@ -260,7 +256,7 @@ describe("Integration: Enrollment Endpoints", () => {
 
   describe("DELETE /api/v1/enrollment/:id", () => {
     it("allows student to unenroll", async () => {
-      mockedEnrollmentService.unenroll.mockResolvedValue();
+      mockEnrollmentService.unenroll.mockResolvedValue();
 
       const token = generateStudentToken("student-1");
       const response = await request(app)
@@ -271,7 +267,7 @@ describe("Integration: Enrollment Endpoints", () => {
     });
 
     it("allows teacher to unenroll students from their subjects", async () => {
-      mockedEnrollmentService.unenroll.mockResolvedValue();
+      mockEnrollmentService.unenroll.mockResolvedValue();
 
       const token = generateTeacherToken("teacher-1");
       const response = await request(app)
@@ -282,7 +278,7 @@ describe("Integration: Enrollment Endpoints", () => {
     });
 
     it("allows God to unenroll any student", async () => {
-      mockedEnrollmentService.unenroll.mockResolvedValue();
+      mockEnrollmentService.unenroll.mockResolvedValue();
 
       const token = generateGodToken();
       const response = await request(app)
@@ -293,7 +289,7 @@ describe("Integration: Enrollment Endpoints", () => {
     });
 
     it("returns 403 when unenrolling without permission", async () => {
-      mockedEnrollmentService.unenroll.mockRejectedValue(
+      mockEnrollmentService.unenroll.mockRejectedValue(
         new Error("No tienes permiso para eliminar esta inscripcion.")
       );
 
@@ -306,7 +302,7 @@ describe("Integration: Enrollment Endpoints", () => {
     });
 
     it("returns 404 when enrollment not found", async () => {
-      mockedEnrollmentService.unenroll.mockRejectedValue(new Error("Inscripcion no encontrada."));
+      mockEnrollmentService.unenroll.mockRejectedValue(new Error("Inscripcion no encontrada."));
 
       const token = generateStudentToken();
       const response = await request(app)

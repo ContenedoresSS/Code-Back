@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import type { CodeFile } from "../types/models/execution/code-file.model.js";
-import submissionService from "../services/submission.service.js";
+import type { ISubmissionService } from "../services/interfaces/submission.service.interface.js";
 import { parseStringParam } from "../helpers/param.helper.js";
 import { isBase64 } from "../helpers/base64-validator.helper.js";
 import { QueueTimeoutError } from "../helpers/concurrency-limiter.helper.js";
@@ -12,8 +12,10 @@ const sizeLimits = {
   maxStdinBytes: ENV.EXECUTION_MAX_STDIN_BYTES,
 };
 
-class SubmissionController {
-  public async submit(req: Request, res: Response) {
+export class SubmissionController {
+  constructor(private readonly submissionService: ISubmissionService) {}
+
+  public submit = async (req: Request, res: Response) => {
     try {
       const activityId = parseStringParam(req.params.id, "ID de la actividad");
       const files: CodeFile[] = req.body.files;
@@ -58,7 +60,7 @@ class SubmissionController {
         return res.status(400).json({ error: sizeError });
       }
 
-      const result = await submissionService.processSubmission(
+      const result = await this.submissionService.processSubmission(
         activityId,
         files,
         userId,
@@ -81,7 +83,5 @@ class SubmissionController {
 
       return res.status(400).json({ error: error.message });
     }
-  }
+  };
 }
-
-export default new SubmissionController();

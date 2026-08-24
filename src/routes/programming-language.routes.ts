@@ -1,15 +1,15 @@
 import { Router } from "express";
-import ProgrammingLanguageController from "../controllers/programming-language.controller.js";
-import { rbac } from "../middlewares/rbac.middleware.js";
-import { authenticate } from "../middlewares/auth.middleware.js";
+import { container } from "../config/container.js";
+
+const { programmingLanguageController, authenticate, rbac } = container.cradle;
 
 const router = Router();
 
-router.get("/", ProgrammingLanguageController.getAll);
+router.get("/", programmingLanguageController.getAll);
 
-router.get("/:id", ProgrammingLanguageController.getById);
-router.post("/", authenticate, rbac([]), ProgrammingLanguageController.create);
-router.put("/:id", authenticate, rbac([]), ProgrammingLanguageController.update);
-router.delete("/:id", authenticate, rbac([]), ProgrammingLanguageController.delete);
+router.get("/:id", programmingLanguageController.getById);
+router.post("/", authenticate, rbac([]), programmingLanguageController.create);
+router.put("/:id", authenticate, rbac([]), programmingLanguageController.update);
+router.delete("/:id", authenticate, rbac([]), programmingLanguageController.delete);
 
 export default router;

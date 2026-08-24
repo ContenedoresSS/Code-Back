@@ -1,8 +1,8 @@
 import { Router } from "express";
-import authController from "../controllers/auth.controller.js";
-import { authenticate } from "../middlewares/auth.middleware.js";
-import { rbac } from "../middlewares/rbac.middleware.js";
+import { container } from "../config/container.js";
 import { UserRole } from "../types/enums/role.enum.js";
+
+const { authController, authenticate, rbac } = container.cradle;
 
 const router = Router();
 

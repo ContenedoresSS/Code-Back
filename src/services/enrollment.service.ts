@@ -171,5 +171,3 @@ export class EnrollmentService implements IEnrollmentService {
     }
   }
 }
-
-export default new EnrollmentService();

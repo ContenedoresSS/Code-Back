@@ -19,25 +19,17 @@ vi.mock("../../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-vi.mock("../../src/services/evaluation.service.js", () => ({
-  default: {
-    evaluateSubmission: vi.fn(),
-  },
-}));
-
-vi.mock("../../src/services/enrollment.service.js", () => ({
-  default: {
-    ensureEnrollment: vi.fn(),
-  },
-}));
-
-import submissionService from "../../src/services/submission.service.js";
-import evaluationService from "../../src/services/evaluation.service.js";
-import enrollmentService from "../../src/services/enrollment.service.js";
+import { SubmissionService } from "../../src/services/submission.service.js";
 import { SubmissionStatus } from "../../src/types/enums/submission-status.enum.js";
 
-const mockedEvaluationService = vi.mocked(evaluationService);
-const mockedEnrollmentService = vi.mocked(enrollmentService);
+const mockedEvaluationService = { evaluateSubmission: vi.fn() };
+const mockedEnrollmentService = {
+  enrollStudent: vi.fn(),
+  getEnrollments: vi.fn(),
+  unenroll: vi.fn(),
+  ensureEnrollment: vi.fn(),
+};
+const submissionService = new SubmissionService(mockedEvaluationService, mockedEnrollmentService);
 
 describe("SubmissionService", () => {
   const mockFiles = [{ name: "main.py", content: "cHJpbnQoJ0hlbGxvJyk=" }];

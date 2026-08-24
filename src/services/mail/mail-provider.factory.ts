@@ -4,7 +4,7 @@ import { ResendMailProvider } from "./resend-mail-provider.js";
 import { SmtpMailProvider } from "./smtp-mail-provider.js";
 import { MailProviderNotConfiguredError } from "./mail-provider-not-configured.error.js";
 
-class MailProviderFactory {
+export class MailProviderFactory {
   create(): IMailProvider {
     if (ENV.EMAIL_PROVIDER === "none") {
       throw new MailProviderNotConfiguredError();

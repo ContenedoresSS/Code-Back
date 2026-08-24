@@ -25,8 +25,10 @@ vi.mock("../../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-import subjectService from "../../src/services/subject.service.js";
+import { SubjectService } from "../../src/services/subject.service.js";
 import { UserRole } from "../../src/types/enums/role.enum.js";
+
+const subjectService = new SubjectService();
 
 describe("SubjectService", () => {
   beforeEach(() => {

@@ -1,17 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 
-vi.mock("../../src/services/token.service.js", () => ({
-  default: {
-    verifyAccessToken: vi.fn(),
-  },
-}));
-
-import { authenticate, optionalAuthenticate } from "../../src/middlewares/auth.middleware.js";
-import tokenService from "../../src/services/token.service.js";
+import {
+  createAuthenticate,
+  createOptionalAuthenticate,
+} from "../../src/middlewares/auth.middleware.js";
 import { UserRole } from "../../src/types/enums/role.enum.js";
 
-const mockedTokenService = vi.mocked(tokenService);
+const mockedTokenService = {
+  generateTokenPair: vi.fn(),
+  verifyAccessToken: vi.fn(),
+  verifyRefreshToken: vi.fn(),
+  generateResetToken: vi.fn(),
+  verifyResetToken: vi.fn(),
+};
+const authenticate = createAuthenticate(mockedTokenService);
+const optionalAuthenticate = createOptionalAuthenticate(mockedTokenService);
 
 const createMockRequest = (authHeader?: string): Request => {
   return {
