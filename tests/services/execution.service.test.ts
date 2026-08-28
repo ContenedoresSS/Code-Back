@@ -120,16 +120,13 @@ describe("ExecutionService", () => {
             PidsLimit: 50,
             AutoRemove: false,
             ReadonlyRootfs: false,
-            Tmpfs: {
-              "/app": "rw,exec,nosuid,size=64m",
-              "/tmp": "rw,noexec,nosuid,size=64m",
-            },
           }),
         })
       );
       expect(mocks.createContainer.mock.calls[0]?.[0]?.HostConfig).not.toHaveProperty(
         "SecurityOpt"
       );
+      expect(mocks.createContainer.mock.calls[0]?.[0]?.HostConfig).not.toHaveProperty("Tmpfs");
     });
 
     it("logs an error when container cleanup fails instead of silencing it", async () => {

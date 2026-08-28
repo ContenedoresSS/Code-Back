@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.27-alpha] - 2026-08-28
+
+### Fixed
+- Restored `run-with-files` execution: removed the tmpfs mount over `/app` and `/tmp` that shadowed files uploaded before container start (C++ `*.cpp: No such file or directory` and Python `.stdin.txt: No such file`)
+
+### Removed
+- Read-only rootfs test removed (the read-only sandbox mode is deprecated)
+
+## [0.0.26-alpha] - 2026-08-27
+
+### Changed
+- Migrated services and controllers to awilix dependency injection (constructor injection resolved from a single container)
+- `EXECUTION_AUTO_REMOVE` and `EXECUTION_READONLY_ROOTFS` now default to `false` (cleanup is explicit in the `finally` block and read-only rootfs breaks interpreters that write to the rootfs)
+
+### Fixed
+- Added `TRUST_PROXY` (default `1`) so express-rate-limit can identify clients behind the reverse proxy, fixing `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`
+- Container cleanup no longer logs an error when removal is already in progress (Docker 409)
+
+### Docs
+- Added DEBT-32 for the missing `username` field in the register response
+
 ## [0.0.25-alpha] - 2026-08-19
 
 ### Fixed
@@ -261,7 +282,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial project setup
 - First commit
 
-[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.25-alpha...HEAD
+[Unreleased]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.27-alpha...HEAD
+[0.0.27-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.26-alpha...v0.0.27-alpha
+[0.0.26-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.25-alpha...v0.0.26-alpha
 [0.0.25-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.24-alpha...v0.0.25-alpha
 [0.0.24-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.23-alpha...v0.0.24-alpha
 [0.0.23-alpha]: https://github.com/ContenedoresSS/Code-Panel-Backend/compare/v0.0.22-alpha...v0.0.23-alpha
