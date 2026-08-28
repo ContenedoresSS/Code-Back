@@ -41,6 +41,7 @@ const serverSchema = {
   PORT: intEnv(3000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   DATABASE_URL: z.string().url("It must be a valid database URL"),
+  TRUST_PROXY: z.coerce.number().int().positive().default(1),
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -82,8 +83,8 @@ const executionSchema = {
   EXECUTION_CPU_QUOTA: intEnv(50000),
   EXECUTION_PIDS_LIMIT: intEnv(30),
   EXECUTION_TIMEOUT_MS: intEnv(10000),
-  EXECUTION_AUTO_REMOVE: boolEnv(true),
-  EXECUTION_READONLY_ROOTFS: boolEnv(true),
+  EXECUTION_AUTO_REMOVE: boolEnv(false),
+  EXECUTION_READONLY_ROOTFS: boolEnv(false),
   EXECUTION_NO_NEW_PRIVILEGES: boolEnv(true),
   EXECUTION_MAX_CONCURRENCY: intEnv(5),
   EXECUTION_QUEUE_TIMEOUT_MS: intEnv(30000),

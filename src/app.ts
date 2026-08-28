@@ -12,6 +12,7 @@ const PORT = ENV.PORT;
 export const corsOptions: CorsOptions = buildCorsOptions(ENV.corsOrigins);
 
 const app = express();
+app.set("trust proxy", ENV.TRUST_PROXY);
 app.use(cors(corsOptions));
 app.use(express.json({ limit: ENV.MAX_REQUEST_BODY }));
 

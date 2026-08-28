@@ -144,6 +144,21 @@ describe("ExecutionService", () => {
       errorSpy.mockRestore();
     });
 
+    it("silences 409 cleanup conflicts (container already being removed)", async () => {
+      const container = createFakeContainer();
+      const conflict = Object.assign(new Error("removal is already in progress"), {
+        statusCode: 409,
+      });
+      container.remove.mockRejectedValue(conflict);
+      mocks.createContainer.mockResolvedValue(container);
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await executionService.runCodeWithFiles(1, files, "main.py");
+
+      expect(errorSpy).not.toHaveBeenCalled();
+      errorSpy.mockRestore();
+    });
+
     it("maps exit code 137 to TIME_LIMIT_EXCEEDED", async () => {
       const container = createFakeContainer({
         wait: vi.fn().mockResolvedValue({ StatusCode: 137 }),

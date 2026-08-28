@@ -38,12 +38,12 @@ describe("execution sandbox env defaults", () => {
     expect(ENV.EXECUTION_TIMEOUT_MS).toBe(10000);
   });
 
-  it("enables AutoRemove by default", () => {
-    expect(ENV.EXECUTION_AUTO_REMOVE).toBe(true);
+  it("disables AutoRemove by default (cleanup is explicit in finally)", () => {
+    expect(ENV.EXECUTION_AUTO_REMOVE).toBe(false);
   });
 
-  it("enables read-only rootfs by default", () => {
-    expect(ENV.EXECUTION_READONLY_ROOTFS).toBe(true);
+  it("disables read-only rootfs by default (breaks interpreters writing to rootfs)", () => {
+    expect(ENV.EXECUTION_READONLY_ROOTFS).toBe(false);
   });
 
   it("enables no-new-privileges by default", () => {

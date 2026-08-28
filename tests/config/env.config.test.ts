@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_CORS_ORIGINS, parseCorsOrigins } from "../../src/config/env.config.js";
+import { DEFAULT_CORS_ORIGINS, parseCorsOrigins, ENV } from "../../src/config/env.config.js";
 
 describe("parseCorsOrigins", () => {
   it("returns default origins when CORS_ORIGINS is undefined", () => {
@@ -20,5 +20,11 @@ describe("parseCorsOrigins", () => {
   it("filters out empty strings from trailing commas", () => {
     const result = parseCorsOrigins(",http://a.com,");
     expect(result).toEqual(["http://a.com"]);
+  });
+});
+
+describe("TRUST_PROXY", () => {
+  it("defaults to 1 when not set", () => {
+    expect(ENV.TRUST_PROXY).toBe(1);
   });
 });

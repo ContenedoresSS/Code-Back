@@ -112,7 +112,9 @@ export class ExecutionService implements IExecutionService {
       try {
         await container.remove({ force: true });
       } catch (error: unknown) {
-        console.error("[ExecutionService] Failed to remove container:", error);
+        if (!this.isRemovalInProgressError(error)) {
+          console.error("[ExecutionService] Failed to remove container:", error);
+        }
       }
     }
   }
@@ -218,6 +220,15 @@ export class ExecutionService implements IExecutionService {
       error !== null &&
       "statusCode" in error &&
       (error as { statusCode: number }).statusCode === 404
+    );
+  }
+
+  private isRemovalInProgressError(error: unknown): boolean {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "statusCode" in error &&
+      (error as { statusCode: number }).statusCode === 409
     );
   }
 
