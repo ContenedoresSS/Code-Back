@@ -16,32 +16,33 @@ Leyenda: ✅ Resuelto · 🔶 Parcial · ⏳ Abierta.
 | 05 | Patrón de exportación inconsistente | 1 | ✅ Resuelto | feat/dependency-injection-awilix |
 | 06 | Sin manejo centralizado de errores | 2 | ⏳ Abierta | — |
 | 07 | Errores de BD silenciados | 2 | ⏳ Abierta | — |
-| 08 | Request body sin validación en runtime | 3 | ⏳ Abierta | — |
+| 08 | Request body sin validación en runtime | 3 | 🔶 Parcial | validate middleware + 5 validators · residual → DEBT‑08 |
 | 09 | Base64 solo validado con regex | 3 | ⏳ Abierta | — |
 | 10 | Cero tests | 4 | ✅ Resuelto | Sesión Vitest + supertest |
 | 11 | Tipos `any` por todo el código | 5 | ⏳ Abierta | — |
-| 12 | Estilos inconsistentes en controladores | 5 | ⏳ Abierta | — |
+| 12 | Estilos inconsistentes en controladores | 5 | 🔶 Parcial | arrow properties unificadas · `public` residual |
 | 13 | Interfaces con implementación parcial | 5 | ✅ Resuelto | feat/dependency-injection-awilix |
-| 14 | Código muerto | 5 | ⏳ Abierta | — |
+| 14 | Código muerto | 5 | 🔶 Parcial | `executionCommand` eliminado · `consumeInvitation` residual |
 | 15 | Seed duplica singleton de Prisma | 5 | ⏳ Abierta | — |
 | 16 | Sin logging estructurado | 6 | ⏳ Abierta | — |
-| 17 | Sin health check ni readiness probe | 6 | ⏳ Abierta | — |
+| 17 | Sin health check ni readiness probe | 6 | 🔶 Parcial | `/api/health` presente · readiness residual → DEBT‑17 |
 | 18 | Seed usa conexión directa de pg | 7 | ⏳ Abierta | — |
 | 19 | Faltan índices en la BD | 7 | ⏳ Abierta | — |
 | 20 | Rate limit desalineado con lo documentado | 8 | ⏳ Abierta | — |
 | 21 | Sin rate limiting en login | 8 | ⏳ Abierta | — |
 | 22 | Tipos desorganizados entre carpetas | 9 | ⏳ Abierta | — |
 | 23 | Variables de CORS hardcodeadas | 9 | ✅ Resuelto | feat/cors-from-env |
-| 24 | Sin endpoints de matriculación | 10 | ⏳ Abierta | — |
-| 25 | Sin endpoint de consulta de entregas | 10 | ⏳ Abierta | — |
+| 24 | Sin endpoints de matriculación | 10 | ✅ Resuelto | módulo de enrollment |
+| 25 | Sin endpoint de consulta de entregas | 10 | 🔶 Parcial | grades + submission detail · `my-submissions` residual |
 | 26 | Workspace público sin autenticación | 10 | ⏳ Abierta | — |
 | 27 | OpenAPI spec standalone | 11 | ⏳ Abierta | — |
 | 28 | VPS no usa compose.prod.yaml | 12 | ⏳ Abierta | — |
 | 30 | Rollback automático del deploy roto | 12 | ⏳ Abierta | — |
 | 29 | Subida directa de imágenes | 13 | ⏳ Abierta | — |
-| 32 | Respuesta de registro declara `username` inexistente | 5 | ⏳ Abierta | — |
+| 32 | Respuesta de registro declara `username` inexistente | 5 | 🔶 Parcial | `username` opcional · decisión de negocio pendiente |
+| 33 | Endpoint de broma `GET /auth/god-only` (418) | 5 | ⏳ Abierta | — |
 
-**Resumen**: 32 deudas · 7 ✅ resueltas · 1 🔶 parcial (01) · 24 ⏳ abiertas.
+**Resumen**: 33 deudas · 8 ✅ resueltas · 7 🔶 parciales (01, 08, 12, 14, 17, 25, 32) · 18 ⏳ abiertas.
 
 ---
 
@@ -222,10 +223,12 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
   if (!result.success) {
     throw new ValidationError(formatZodErrors(result.error));
   }
-  req.body = result.data; // Tipado inferido
+   req.body = result.data; // Tipado inferido
   next();
 };
 ```
+
+- **Estado**: 🔶 **PARCIAL** — Implementado el middleware `validate` (`src/middlewares/validate.middleware.ts`) y 5 schemas Zod en `src/validators/` (`user`, `subject`, `settings`, `enrollment`, `activity`), aplicados en las rutas de esas entidades. **Pendiente**: extender validación a los endpoints restantes que aún castean `as` sin validar: auth (register, login, refresh, forgot/reset password), invitations, programming-language, execution, test-case y `PATCH /user/profile`.
 
 ### DEBT‑09: Base64 solo validado con regex, no decodificado
 
@@ -276,7 +279,7 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 
 ### DEBT‑12: Estilos inconsistentes en controladores
 
-- **Archivos**: Los 9 controllers
+- **Archivos**: Los 13 controllers
 - **Problema**: Tres estilos distintos en un mismo proyecto:
   | Estilo | Archivos |
   |--------|----------|
@@ -285,6 +288,7 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
   | `public metodo = async () => {}` | `user.controller.ts`, `execution.controller.ts` (parcial) |
 - **Impacto**: Confunde a nuevos desarrolladores. Algunos estilos (arrow functions) no hacen bind correcto del `this`.
 - **Recomendación**: Estandarizar en `public async metodo(req: Request, res: Response): Promise<void>` en todos los controladores.
+- **Estado**: 🔶 **PARCIAL** — Tras la migración a DI, todos los controllers pasaron a arrow properties (`metodo = async`). Queda una inconsistencia residual: algunos declaran el modificador `public` y otros no (`auth`, `invitation`, `programming-language`, `execution`). Unificar el prefijo `public` y, si aplica, el tipo de retorno `Promise<Response|void>`.
 
 ### DEBT‑13: Interfaces con implementación parcial
 
@@ -296,10 +300,11 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 ### DEBT‑14: Código muerto
 
 - **Archivos**:
-  - `src/services/execution.service.ts:45` — variable `executionCommand` definida y nunca usada (se usa `finalCommand`).
-  - `src/services/auth.service.ts:56-61` — método privado `consumeInvitation` nunca invocado (se usa `invitationService.validateAndConsume`).
+  - `src/services/execution.service.ts:45` — variable `executionCommand` definida y nunca usada (se usa `finalCommand`). ✅ **ELIMINADA** — ahora se usa `baseCommand`/`finalCommand`.
+  - `src/services/auth.service.ts:107` — método privado `consumeInvitation` nunca invocado (se usa `invitationService.validateAndConsume`). 🔶 **RESIDUAL**.
   - `src/controllers/user.controller.ts:45` — filtra `undefined` de updateData pero Prisma ya ignora `undefined`.
 - **Impacto**: Confusión al leer el código. Posibles bugs si alguien asume que se usa.
+- **Estado**: 🔶 **PARCIAL** — eliminada la variable `executionCommand` muerta; queda `consumeInvitation` sin usar en `auth.service.ts`.
 
 ### DEBT‑15: El seed tiene su propio singleton de Prisma (duplicación)
 
@@ -314,6 +319,14 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 - **Impacto**: Contrato de respuesta incoherente. El frontend podría estar leyendo `username` siempre `undefined`, o estar usando `identifier` por otro camino.
 - **Mitigación aplicada** (en `feat/dependency-injection-awilix`): `username` quedó opcional en el tipo y se omite del JSON si no existe (spread condicional), sin cambiar runtime.
 - **Pendiente — decisión de negocio**: o mapear `username` a `identifier`, o eliminar el campo de la respuesta y actualizar el frontend.
+- **Estado**: 🔶 **PARCIAL** — `username` ya es opcional en el tipo (`register-user-response.model.ts`); queda la decisión de negocio (mapear a `identifier` o eliminar el campo).
+
+### DEBT‑33: Endpoint de broma `GET /auth/god-only` en rutas de producción
+
+- **Archivos**: `src/routes/auth.routes.ts:15`
+- **Problema**: El endpoint `GET /auth/god-only` responde **418** ("Not coffee, only tea"). Es una broma/código de debug que quedó expuesto en las rutas de autenticación de producción, protegido únicamente por `rbac([])` (accesible a usuarios `God`).
+- **Impacto**: Código residual en un contrato público. Expone una ruta ajena al dominio de negocio, confunde a quien consulte la API y ensucia el surface de ataque sin aportar valor funcional.
+- **Recomendación**: **Eliminar el endpoint** (la línea `router.get("/god-only", ...)`) de `auth.routes.ts` antes de llevar a producción. Si se desea conservar la broma, moverla fuera del router de auth (p. ej. al easter egg oculto), nunca en una ruta autenticada de negocio.
 
 ---
 
@@ -335,6 +348,7 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 - **Problema**: No hay endpoint `/health` que verifique conexión a BD y a Docker. No hay `/ready`. Docker compose no puede saber si el contenedor está sano.
 - **Impacto**: Si la BD se cae, el orquestador no lo sabe y sigue enviando tráfico. Reinicios innecesarios o falta de reinicios.
 - **Recomendación**: Agregar `GET /health` y `GET /ready` con chequeos de BD y Docker socket.
+- **Estado**: 🔶 **PARCIAL** — ya existe `GET /api/health` en `src/app.ts` (status + timestamp + versión), con rate limit propio. **Pendiente**: agregar la liveness/readiness con chequeos reales de BD y del socket de Docker, y exponer `GET /ready` para el orquestador.
 
 ---
 
@@ -403,13 +417,14 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 
 ### DEBT‑24: ¿Cómo se matriculan los estudiantes a las materias?
 
-- **Archivos**: `src/routes/subject.routes.ts`, `src/controllers/subject.controller.ts`
+- **Archivos**: `src/routes/enrollment.routes.ts`, `src/controllers/enrollment.controller.ts`, `src/services/enrollment.service.ts`, `src/validators/enrollment.validators.ts`
 - **Problema**: No hay endpoint para que un estudiante se matricule en una materia. Existe el modelo `Enrollment` en la BD pero sin endpoints expuestos.
 - **Impacto**: El flujo de negocio está incompleto. Los estudiantes no pueden unirse a materias.
 - **Recomendación**: Agregar endpoints:
   - `POST /subject/:id/enroll` (Student)
   - `DELETE /subject/:id/enroll` (desmatricularse)
   - `GET /subject/me` (mis materias como estudiante)
+- **Estado**: ✅ **RESUELTO** — se creó el módulo de enrollment expuesto en `/api/v1/enrollment` (mounteado en `index-v1.routes.ts`): `GET /` (listado), `POST /` (matricularse, rol Student + validación Zod) y `DELETE /:id` (desmatricularse).
 
 ### DEBT‑25: Sin endpoint de consulta de entregas
 
@@ -419,6 +434,7 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 - **Recomendación**: Agregar:
   - `GET /activity/:id/submissions` (Teacher — ve entregas de todos los alumnos)
   - `GET /activity/:id/my-submissions` (Student — ve su historial de entregas)
+- **Estado**: 🔶 **PARCIAL** — ya existen `GET /activity/:id/grades` (calificaciones paginadas, Teacher/Student según rol) y `GET /activity/:id/submissions/:submissionId` (detalle de una entrega). **Pendiente**: un listado `my-submissions` dedicado para que el estudiante vea su historial de entregas de una actividad.
 
 ### DEBT‑26: Workspace es público sin ninguna autenticación
 
@@ -522,17 +538,17 @@ export const validate = (schema: ZodSchema) => (req: Request, _res: Response, ne
 |-----------|-------|-------|-----------------|
 | **Crítica** | 01 ✅, 02 ✅, 03 ✅ | Sandbox | Corregir fugas de contenedores y DoS |
 | **Alta** | 31 | Sandbox | Reconciliación externa de contenedores huérfanos (residual de DEBT‑01) |
-| **Alta** | 08, 09, 20 | Validación + Rate limit | Zod schemas y corregir límite a 2 |
+| **Alta** | 08 🔶, 09, 20 | Validación + Rate limit | Completar Zod schemas en rutas pendientes y corregir límite a 2 |
 | **Alta** | 06, 07 | Error handling | AppError + middleware global |
 | **Alta** | 04 ✅, 05 ✅ | DI + acoplamiento | awilix: composition root único, inyección por constructor |
 | **Alta** | 11 | Tipos `any` | Arreglar express.d.ts y eliminar casteos |
 | **Alta** | 30 | CI/CD | Rollback roto: arreglar sudoers y fijar digest anterior |
-| **Media** | 12, 14, 15 | Consistencia | Uniformizar estilos, limpiar código muerto |
-| **Media** | 16, 17 | Observabilidad | pino, health check |
+| **Media** | 12 🔶, 14 🔶, 15 | Consistencia | Unificar prefijo `public`, eliminar `consumeInvitation`, seed singleton |
+| **Media** | 16, 17 🔶 | Observabilidad | pino, completar readiness probe |
 | **Media** | 19, 21 | BD + auth | Índices, rate limit en login |
-| **Media** | 24, 25, 26 | Negocio | Endpoints de enrollment y submissions |
+| **Media** | 24 ✅, 25 🔶, 26 | Negocio | `my-submissions` para estudiantes, proteger workspace |
 | **Media** | 28 | CI/CD | Configurar VPS para usar compose.prod.yaml |
 | **Media** | 29 | Archivos | Implementar subida directa de imágenes para materias |
 | **Baja** | 18, 22, 23 | DX | Organizar tipos, CORS en env |
-| **Baja** | 32 | Contrato | Decidir: mapear `username` a `identifier` o eliminar el campo |
+| **Baja** | 32, 33 | Contrato | Decidir `username`; eliminar endpoint de broma `god-only` |
 | **Seguimiento** | 27 | OpenAPI | Migrar a zod-to-openapi cuando se implemente DEBT‑08 |
