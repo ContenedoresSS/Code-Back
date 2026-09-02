@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.28-alpha] - 2026-09-02
 
 ### Added
-- Hidden credits endpoint (`GET /api/credits`) that returns the project's ASCII rat art when the Konami code header is provided; the same art prints to the console on startup when `EGG=true` in development
+- A couple of small residents moved into the workspace: they greet visitors who know the secret knock (`GET /api/credits`) and, in development, they show up to say hi on startup when you open the door (`EGG=true`)
 
 ### Docs
 - Updated the technical debt dashboard: marked enrollment module, DI, CORS and other items as resolved, tracked partially resolved items (validation, controller styles, dead code, health check, submissions, `username` field) and added DEBT-33 for the leftover `god-only` joke endpoint
