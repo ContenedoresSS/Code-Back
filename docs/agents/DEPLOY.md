@@ -19,6 +19,7 @@ El backend es **agnóstico a la plataforma de despliegue**. Solo requiere Docker
 11. [Migración a otro servidor](#11-migración-a-otro-servidor)
 12. [Seguridad básica del host](#12-seguridad-básica-del-host)
 13. [Resumen: checklist de primer despliegue](#13-resumen-checklist-de-primer-despliegue)
+14. [Frontend deployment](#14-frontend-deployment)
 
 ---
 
@@ -724,3 +725,27 @@ sudo systemctl enable fail2ban
 - [ ] Secrets de GitHub Actions configurados
 - [ ] Primer deploy vía CI/CD verificado con tag `v*`
 - [ ] Backups automáticos programados
+
+---
+
+## 14. Frontend deployment
+
+> This section is kept in English by request. The rest of the deployment guide describes the backend only.
+
+The **frontend** (React admin panel and code editor) lives in a separate repository and is **not covered by `compose.prod.yaml`** here. Two deployment options exist.
+
+### 14.1 Current: Cloudflare Pages
+
+Today the frontend is deployed on **Cloudflare Pages** (static hosting + CDN). There is nothing to configure in this repository for that option.
+
+### 14.2 Alternative: containerized frontend
+
+The frontend **can also be deployed as a container** next to the backend. In that case, add a frontend service to `compose.prod.yaml` (built image or build from the frontend repo) and route it through the same reverse proxy. Nothing in the backend changes.
+
+### 14.3 Frontend to backend communication
+
+- The frontend calls the backend over **HTTPS with CORS** enabled (see `CORS_ORIGINS` in the `.env`).
+- The backend is served **behind an Nginx reverse proxy** (SSL termination).
+- **PostgreSQL is not exposed** to the internet; it only listens on the internal Docker network.
+
+See [`docs/design/architecture-diagram.md`](../design/architecture-diagram.md) for the full deployment topology.
